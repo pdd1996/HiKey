@@ -1,0 +1,19 @@
+appId: com.hikey.app
+productName: HiKey
+
+directories:
+  buildResources: resources
+  output: release
+
+# Windows NSIS 安装包（M6 实际打包验证；M1 仅配置就位）
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+
+nsis:
+  oneClick: false            # 非一键安装，允许用户改安装目录
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false

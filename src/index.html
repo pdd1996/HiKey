@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- 禁止缩放缩放，桌面应用语义 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- CSP：禁止外部导航与远程内容加载（技术栈 §4.2）；unsafe-inline 仅为 Tailwind 运行时注入样式 -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self';"
+    />
+    <title>HiKey</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./main.tsx"></script>
+  </body>
+</html>
