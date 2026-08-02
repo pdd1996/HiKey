@@ -2,7 +2,8 @@
   "include": [
     "electron.vite.config.ts",
     "electron/main/**/*",
-    "electron/preload/**/*"
+    "electron/preload/**/*",
+    "tailwind.config.ts"
   ],
   "compilerOptions": {
     "composite": true,
