@@ -23,3 +23,16 @@ npm run build    # 构建到 out/
 npm run package  # 构建并打包为 Windows NSIS 安装包
 npm run typecheck
 ```
+
+### 国内网络加速（可选）
+
+Electron 与 electron-builder 的二进制下载较慢时，在安装/打包命令前内联注入镜像环境变量（Git Bash；cmd 需 `set X=Y &&` 形式）：
+
+```bash
+# 首次安装
+ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-builder-binaries/ npm install
+# 打包
+ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-builder-binaries/ npm run package
+```
+
+> 不放入 `.npmrc`：npm 11+ 会对未识别的 key 报警告，内联注入只在需要的命令生效，不污染 dev/typecheck。
