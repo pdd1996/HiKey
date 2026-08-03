@@ -1,13 +1,19 @@
 import { app, BrowserWindow, dialog, shell } from 'electron'
 import { join } from 'path'
 import { initStorage } from './storage/db'
+import { createScheduler, type Scheduler } from './healthCheck/scheduler'
 
 // 主进程入口（M1 脚手架）
-// 业务模块（healthCheck/scheduler/importer/backup/ipc）留待各自里程碑；M2 已落地 crypto/storage。
+// 业务模块（importer/backup/ipc）留待各自里程碑；M2 已落地 crypto/storage，M3 落地 healthCheck/scheduler。
 
 // 单实例锁：lowdb 写单一 userData/hikey-db.json，双实例并发写会互相覆盖
 // （PRD 零云端、单机定位）。第二实例直接聚焦已有窗口并退出。
 const gotTheLock = app.requestSingleInstanceLock()
+
+// M3 健康检测调度器：app.whenReady 后启动（启动即首检 + 按间隔轮询），
+// 关窗停止（best-effort 丢弃未完成检测）。IPC 接入留 M5。
+let scheduler: Scheduler | undefined
+
 if (!gotTheLock) {
   app.quit()
 } else {
@@ -36,16 +42,25 @@ if (!gotTheLock) {
 
     createWindow()
 
+    // 启动健康检测调度器（启动即首检一轮，再按 meta.checkIntervalMinutes 轮询）。
+    // M5 接 IPC 后传入 onUpdate 回调驱动 status:update；M3 仅留空钩子。
+    scheduler = createScheduler()
+    scheduler.start()
+
     app.on('activate', () => {
       // macOS：点 dock 图标时若无窗口则重建
       if (BrowserWindow.getAllWindows().length === 0) createWindow()
     })
   })
 
-  // 关窗即退出，不做托盘常驻（PRD 非目标）
+  // 关窗即退出，不做托盘常驻（PRD 非目标）。退出前停止调度器，best-effort 丢弃未完成检测。
   app.on('window-all-closed', () => {
+    scheduler?.stop()
     app.quit()
   })
+
+  // 兜底：经菜单/Ctrl+Q 等非窗口路径退出时也停止调度器（stop 幂等）。
+  app.on('before-quit', () => scheduler?.stop())
 }
 
 function createWindow(): void {

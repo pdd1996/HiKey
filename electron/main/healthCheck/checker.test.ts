@@ -1,0 +1,197 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { checkKey, type FetchImpl } from './checker'
+import type { KeyRecord, Meta } from '../storage/schema'
+
+// mock electron safeStorage：默认可用、可逆，与 crypto.test 同范式。
+const { mockSafeStorage } = vi.hoisted(() => {
+  const state = { available: true }
+  return {
+    mockSafeStorage: {
+      isEncryptionAvailable: () => state.available,
+      encryptString: (s: string) => Buffer.from(s, 'utf8').toString('base64'),
+      decryptString: (s: string) => Buffer.from(s, 'base64').toString('utf8'),
+      _setAvailable: (v: boolean) => {
+        state.available = v
+      }
+    }
+  }
+})
+vi.mock('electron', () => ({ safeStorage: mockSafeStorage }))
+
+const NOW = 1_700_000_000_000
+
+function rec(over: Partial<KeyRecord> = {}): KeyRecord {
+  return {
+    id: 'k1',
+    name: 'n',
+    provider: 'openai',
+    baseUrl: 'https://api.openai.com',
+    encSecret: Buffer.from('sk-secret', 'utf8').toString('base64'),
+    secretMode: 'safeStorage',
+    status: 'unchecked',
+    deepCheck: true,
+    testModel: 'gpt-4o-mini',
+    createdAt: 1,
+    updatedAt: 1,
+    ...over
+  }
+}
+
+function meta(over: Partial<Meta> = {}): Meta {
+  return {
+    checkIntervalMinutes: 15,
+    deepCheckEnabled: true,
+    deepCheckOnEveryPoll: false,
+    concurrentChecks: 4,
+    pingTimeoutMs: 2000,
+    deepTimeoutMs: 2000,
+    allowPlaintextFallback: false,
+    plaintextMode: false,
+    clipboardClearMs: 60000,
+    ...over
+  }
+}
+
+/** 构造按调用序列返回不同响应的 mock fetch。 */
+function fetchSeq(...responses: { status: number; body?: unknown }[]): FetchImpl {
+  let i = 0
+  return vi.fn(async () => {
+    const r = responses[i++] ?? { status: 200 }
+    return { status: r.status, json: async () => r.body ?? null } as unknown as Response
+  }) as unknown as FetchImpl
+}
+
+beforeEach(() => {
+  vi.clearAllMocks()
+})
+
+describe('checkKey', () => {
+  it('openai ping+deep 全通过 → valid + deep 模式', async () => {
+    const f = fetchSeq({ status: 200, body: { data: [] } }, { status: 200 })
+    const out = await checkKey(rec(), meta(), 'manual', f, NOW)
+    expect(out.status).toBe('valid')
+    expect(out.lastCheckMode).toBe('deep')
+    expect(out.lastDeepCheckedAt).toBe(NOW)
+    expect(f).toHaveBeenCalledTimes(2)
+  })
+
+  it('ping 401 → invalid，不发 deep（fetch 只调 1 次）', async () => {
+    const f = fetchSeq({ status: 401, body: { error: { code: 'invalid_api_key' } } })
+    const out = await checkKey(rec(), meta(), 'manual', f, NOW)
+    expect(out.status).toBe('invalid')
+    expect(out.lastCheckMode).toBe('ping')
+    expect(out.lastError).toBe('401 / invalid_api_key')
+    expect(f).toHaveBeenCalledTimes(1)
+  })
+
+  it('ping valid + 全局 deepCheckEnabled=false → 仅 ping', async () => {
+    const f = fetchSeq({ status: 200 })
+    const out = await checkKey(rec(), meta({ deepCheckEnabled: false }), 'manual', f, NOW)
+    expect(out.status).toBe('valid')
+    expect(out.lastCheckMode).toBe('ping')
+    expect(out.lastDeepCheckedAt).toBeUndefined()
+    expect(f).toHaveBeenCalledTimes(1)
+  })
+
+  it('ping valid + 记录 deepCheck=false → 仅 ping', async () => {
+    const f = fetchSeq({ status: 200 })
+    const out = await checkKey(rec({ deepCheck: false }), meta(), 'manual', f, NOW)
+    expect(out.lastCheckMode).toBe('ping')
+    expect(f).toHaveBeenCalledTimes(1)
+  })
+
+  it('poll trigger + deepCheckOnEveryPoll=false → 不深检；=true → 深检', async () => {
+    const fNo = fetchSeq({ status: 200 })
+    const outNo = await checkKey(rec(), meta({ deepCheckOnEveryPoll: false }), 'poll', fNo, NOW)
+    expect(outNo.lastCheckMode).toBe('ping')
+    expect(fNo).toHaveBeenCalledTimes(1)
+
+    const fYes = fetchSeq({ status: 200 }, { status: 200 })
+    const outYes = await checkKey(
+      rec(),
+      meta({ deepCheckOnEveryPoll: true }),
+      'poll',
+      fYes,
+      NOW
+    )
+    expect(outYes.lastCheckMode).toBe('deep')
+    expect(fYes).toHaveBeenCalledTimes(2)
+  })
+
+  it('manual trigger 即便 deepCheckOnEveryPoll=false 也深检', async () => {
+    const f = fetchSeq({ status: 200 }, { status: 200 })
+    const out = await checkKey(rec(), meta({ deepCheckOnEveryPoll: false }), 'manual', f, NOW)
+    expect(out.lastCheckMode).toBe('deep')
+  })
+
+  it('custom + testModel 空 → ping valid 但跳过深检', async () => {
+    const f = fetchSeq({ status: 200 })
+    const out = await checkKey(
+      rec({ provider: 'custom', baseUrl: 'https://myproxy.com', testModel: '' }),
+      meta(),
+      'manual',
+      f,
+      NOW
+    )
+    expect(out.status).toBe('valid')
+    expect(out.lastCheckMode).toBe('ping')
+    expect(f).toHaveBeenCalledTimes(1)
+  })
+
+  it('safeStorage 不可用 + safeStorage 密文 → unknown + 无法解密旧记录，不发网络', async () => {
+    mockSafeStorage._setAvailable(false)
+    const f = fetchSeq({ status: 200 })
+    const out = await checkKey(rec(), meta(), 'manual', f, NOW)
+    expect(out.status).toBe('unknown')
+    expect(out.lastError).toBe('无法解密旧记录')
+    expect(f).not.toHaveBeenCalled()
+    mockSafeStorage._setAvailable(true)
+  })
+
+  it('明文降级记录照常检测（plaintext 直取明文）', async () => {
+    const f = fetchSeq({ status: 200 }, { status: 200 })
+    const out = await checkKey(
+      rec({ secretMode: 'plaintext', encSecret: 'sk-plain' }),
+      meta(),
+      'manual',
+      f,
+      NOW
+    )
+    expect(out.status).toBe('valid')
+    expect(out.lastCheckMode).toBe('deep')
+  })
+
+  it('ping 超时 → unknown', async () => {
+    // fetch 永不主动 resolve，仅响应 signal abort
+    const f = vi.fn(
+      async (_url: string, init: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          init.signal?.addEventListener('abort', () => reject(new Error('aborted')))
+        })
+    ) as unknown as FetchImpl
+    const out = await checkKey(rec(), meta({ pingTimeoutMs: 10 }), 'manual', f, NOW)
+    expect(out.status).toBe('unknown')
+    expect(out.lastCheckMode).toBe('ping')
+  })
+
+  it('deep 400 → 状态保持 valid + 模型/配置 lastError', async () => {
+    const f = fetchSeq({ status: 200 }, { status: 400, body: { error: { code: 'model_not_found' } } })
+    const out = await checkKey(rec(), meta(), 'manual', f, NOW)
+    expect(out.status).toBe('valid')
+    expect(out.lastCheckMode).toBe('deep')
+    expect(out.lastError).toBe('深检未通过：模型/配置问题，建议更换 testModel')
+  })
+
+  it('ping 402 无 body → quota_exceeded', async () => {
+    const f = fetchSeq({ status: 402, body: null })
+    const out = await checkKey(rec(), meta(), 'manual', f, NOW)
+    expect(out.status).toBe('quota_exceeded')
+    expect(out.lastCheckMode).toBe('ping')
+  })
+
+  it('时间戳用注入的 now，不依赖 Date.now', async () => {
+    const f = fetchSeq({ status: 200 })
+    const out = await checkKey(rec(), meta({ deepCheckEnabled: false }), 'manual', f, 12345)
+    expect(out.lastChecked).toBe(12345)
+  })
+})
