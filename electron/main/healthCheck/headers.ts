@@ -8,13 +8,8 @@ import type { Provider } from '../storage/schema'
 /** Anthropic API 版本头常量（PRD：非用户配置）。 */
 export const ANTHROPIC_VERSION = '2023-06-01'
 
-/** 各 provider 默认测试模型（custom 无默认，必填）。M3 联调后定稿。 */
-export const DEFAULT_TEST_MODEL: Record<Provider, string> = {
-  openai: 'gpt-4o-mini',
-  anthropic: 'claude-3-5-haiku-latest',
-  deepseek: 'deepseek-chat',
-  custom: ''
-}
+// DEFAULT_TEST_MODEL 单一来源在 ../providers（导入与检测共用），此处 re-export 保留 M3 既有导入路径。
+export { DEFAULT_TEST_MODEL } from '../providers'
 
 /** 构造请求 headers。 */
 export function buildHeaders(provider: Provider, apiKey: string): Record<string, string> {
