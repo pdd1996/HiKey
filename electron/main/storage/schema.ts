@@ -4,10 +4,10 @@
 /** 当前 schema 版本号。低于此值触发迁移。 */
 export const SCHEMA_VERSION = 2
 
-/** 已知 provider 白名单。不在其中的历史值（如 gemini）迁移为 custom。 */
-export const KNOWN_PROVIDERS = ['openai', 'anthropic', 'deepseek', 'custom'] as const
-
-export type Provider = (typeof KNOWN_PROVIDERS)[number]
+// KNOWN_PROVIDERS / Provider 已抽到 shared/providers.ts（跨进程共享单一来源）。
+// 此处 re-export 保持现有 `from '../storage/schema'` 引用不变。
+import { KNOWN_PROVIDERS, type Provider } from '../../../shared/providers'
+export { KNOWN_PROVIDERS, type Provider }
 
 /** secretMode 自描述 encSecret 是密文还是明文（§3.2） */
 export type SecretMode = 'safeStorage' | 'plaintext'
