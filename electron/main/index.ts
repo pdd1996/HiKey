@@ -1,8 +1,9 @@
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, dialog, shell } from 'electron'
 import { join } from 'path'
+import { initStorage } from './storage/db'
 
 // 主进程入口（M1 脚手架）
-// 业务模块（crypto/storage/healthCheck/scheduler/importer/backup/ipc）留待各自里程碑
+// 业务模块（healthCheck/scheduler/importer/backup/ipc）留待各自里程碑；M2 已落地 crypto/storage。
 
 // 单实例锁：lowdb 写单一 userData/hikey-db.json，双实例并发写会互相覆盖
 // （PRD 零云端、单机定位）。第二实例直接聚焦已有窗口并退出。
@@ -18,7 +19,21 @@ if (!gotTheLock) {
     }
   })
 
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
+    // 初始化存储（lowdb 读写 + schema 迁移 + 归位）。失败则中止启动、不破坏原库（§5）。
+    try {
+      await initStorage(app.getPath('userData'))
+    } catch (err) {
+      dialog.showMessageBoxSync({
+        type: 'error',
+        title: 'HiKey',
+        message: '数据库初始化失败',
+        detail: `迁移或读写异常，已中止启动以保护原库。请从备份恢复。\n\n${String(err)}`
+      })
+      app.quit()
+      return
+    }
+
     createWindow()
 
     app.on('activate', () => {
