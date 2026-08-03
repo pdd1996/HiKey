@@ -1,0 +1,38 @@
+// URL 拼接（PRD FR-2 端点与 URL 规则）
+//
+// baseUrl 语义：统一为"API 根地址，不含版本路径"。
+//   非 custom：先去尾斜杠，再剥离尾部 /v1，最后由代码追加 /v1（避免 /v1/v1）。
+//   custom：原样拼接，不追加版本段（只去尾斜杠），用户自负责填对路径。
+
+import type { Provider } from '../storage/schema'
+
+/** 去尾斜杠 */
+function trimTrailingSlash(url: string): string {
+  return url.replace(/\/+$/, '')
+}
+
+/** 非 custom：剥离尾部 /v1（用户可能填带版本后缀的根） */
+function stripVersionSuffix(url: string): string {
+  return url.replace(/\/v1$/i, '')
+}
+
+/**
+ * ping 端点：非 custom → {root}/v1/models；custom → {用户路径}/models（原样拼接）。
+ */
+export function buildPingUrl(provider: Provider, baseUrl: string): string {
+  const root = trimTrailingSlash(baseUrl)
+  if (provider === 'custom') return `${root}/models`
+  return `${stripVersionSuffix(root)}/v1/models`
+}
+
+/**
+ * deep 端点：
+ *   openai/deepseek/custom → /chat/completions（custom 原样拼接，不追加 /v1）
+ *   anthropic → /v1/messages
+ */
+export function buildDeepUrl(provider: Provider, baseUrl: string): string {
+  const root = trimTrailingSlash(baseUrl)
+  if (provider === 'custom') return `${root}/chat/completions`
+  if (provider === 'anthropic') return `${stripVersionSuffix(root)}/v1/messages`
+  return `${stripVersionSuffix(root)}/v1/chat/completions`
+}
