@@ -1,0 +1,79 @@
+// keys handler（PRD §10 keys:list/add/update/remove/reveal/checkNow/checkAll）
+//
+// 薄胶水：取库（deps.db.data）→ 调纯逻辑 → db.write() → 返回。
+//   add/update：成功后 scheduler.checkNow(id)（PRD 场景 C 保存即检测）。
+//   reveal：取明文 → clipboard.writeText + scheduleClipboardClear（delayMs=meta.clipboardClearMs）
+//     → 返回明文（决策 3：PRD §10 无独立 keys:copy 通道，reveal 即复制 + 60s 清除时机）。
+//   checkNow/checkAll：纯转发调度器。
+//
+// 接线逻辑集中在 reveal 的剪贴板编排，其余为转发。reveal 单测覆盖剪贴板接线。
+
+import { listKeys } from '../keys/list'
+import { addKey, updateKey, removeKey } from '../keys/crud'
+import { revealKey } from '../keys/reveal'
+import { scheduleClipboardClear } from '../keys/clipboard'
+import type { IpcDeps } from './types'
+import type { KeyInput, AddOutcome, UpdateOutcome, RemoveOutcome, RevealOutcome } from '../keys/types'
+import type { KeyRecord } from '../storage/schema'
+import type { SafeKeyView } from '../keys/types'
+
+/** 单条记录剥 encSecret 后的安全视图（status:update 载荷用，避免明文密文下发渲染进程）。 */
+export function toSafeView(record: KeyRecord): SafeKeyView {
+  const { encSecret: _enc, ...view } = record
+  return view as SafeKeyView
+}
+
+export function handleList(deps: IpcDeps): SafeKeyView[] {
+  return listKeys(deps.db.data)
+}
+
+export async function handleAdd(deps: IpcDeps, input: KeyInput): Promise<AddOutcome> {
+  const out = addKey(deps.db.data, input, deps.now())
+  if (!out.ok || !out.id) return out
+  await deps.db.write()
+  // 保存即检测（PRD 场景 C）。checkNow 异步发起，不阻塞返回。
+  deps.scheduler.checkNow(out.id)
+  return out
+}
+
+export async function handleUpdate(deps: IpcDeps, id: string, input: KeyInput): Promise<UpdateOutcome> {
+  const out = updateKey(deps.db.data, id, input, deps.now())
+  if (!out.ok) return out
+  await deps.db.write()
+  deps.scheduler.checkNow(id)
+  return out
+}
+
+export async function handleRemove(deps: IpcDeps, id: string): Promise<RemoveOutcome> {
+  const out = removeKey(deps.db.data, id)
+  if (!out.ok) return out
+  await deps.db.write()
+  return out
+}
+
+/**
+ * 显式查看明文 + 复制 + 60s 比对清除（PRD FR-1 + §10 keys:reveal）。
+ * 取明文 → 写剪贴板 → 排定 60s 后比对清除 → 返回明文给渲染进程一次性显示。
+ * reveal 失败（not-found/undecryptable）不动剪贴板。
+ */
+export function handleReveal(deps: IpcDeps, id: string): RevealOutcome {
+  const out = revealKey(deps.db.data, id)
+  if (!out.ok) return out
+  // 复制到剪贴板 + 排定清除（决策 3）
+  deps.clipboard.writeText(out.plaintext)
+  scheduleClipboardClear(out.plaintext, {
+    readClipboard: () => deps.clipboard.readText(),
+    clearClipboard: () => deps.clipboard.clear(),
+    setTimeout: deps.setTimeout,
+    delayMs: deps.db.data.meta.clipboardClearMs
+  })
+  return out
+}
+
+export function handleCheckNow(deps: IpcDeps, id: string): void {
+  deps.scheduler.checkNow(id)
+}
+
+export function handleCheckAll(deps: IpcDeps): void {
+  deps.scheduler.checkAll()
+}
