@@ -54,8 +54,21 @@ export function encryptForStore(
 /**
  * 读取侧：按 secretMode 还原明文。
  * safeStorage 密文 → 调解密；plaintext → 直取。
+ *
+ * 返回判别联合（PRD FR-1 + M2 遗留契约）：密文损坏或 safeStorage 不可用时
+ * 返回 { ok:false, reason:'undecryptable' }，由调用方据此写 status:'unknown' +
+ * lastError，不抛原始异常、不把错误透传渲染进程。
  */
-export function revealSecret(encSecret: string, mode: SecretMode): string {
-  if (mode === 'plaintext') return encSecret
-  return decrypt(encSecret)
+export type RevealResult =
+  | { ok: true; plaintext: string }
+  | { ok: false; reason: 'undecryptable' }
+
+export function revealSecret(encSecret: string, mode: SecretMode): RevealResult {
+  if (mode === 'plaintext') return { ok: true, plaintext: encSecret }
+  if (!isSafeStorageAvailable()) return { ok: false, reason: 'undecryptable' }
+  try {
+    return { ok: true, plaintext: decrypt(encSecret) }
+  } catch {
+    return { ok: false, reason: 'undecryptable' }
+  }
 }
