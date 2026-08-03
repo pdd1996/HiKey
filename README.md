@@ -2,7 +2,8 @@
 
 本地优先、零云端的 LLM API Key 管理面板，带自动健康检测。
 
-> 当前阶段：M1 脚手架（项目初始化、依赖、electron-vite/builder 配置、空白窗口跑通）。
+> 当前阶段：M6（UI 全链路完成，dev 跑通；待打包验收 M7）。
+> M1–M5（脚手架 / 存储+加密 / 健康检测 / 导入 / IPC+preload）已完成，后端 296 用例通过。
 
 ## 技术栈
 
@@ -23,6 +24,8 @@ npm run build    # 构建到 out/
 npm run package  # 构建并打包为 Windows NSIS 安装包
 npm run typecheck
 ```
+
+> `npm run dev` 经 `scripts/dev.mjs` 包装：启动前清除 `ELECTRON_RUN_AS_NODE`（VS Code 集成终端会继承该变量，使 electron 退化为纯 Node 而崩），故在 VS Code 终端与外部终端均可直接运行。
 
 ### 国内网络加速（可选）
 
