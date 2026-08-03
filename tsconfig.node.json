@@ -3,6 +3,7 @@
     "electron.vite.config.ts",
     "electron/main/**/*",
     "electron/preload/**/*",
+    "shared/**/*",
     "tailwind.config.ts"
   ],
   "compilerOptions": {
