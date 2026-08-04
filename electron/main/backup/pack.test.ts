@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { buildBackup, countPlaintext } from './pack'
-import { defaultDbRoot, type KeyRecord, type SecretMode } from '../storage/schema'
+import { defaultDbRoot, SCHEMA_VERSION, type KeyRecord, type SecretMode } from '../storage/schema'
 
 const { mockSafeStorage } = vi.hoisted(() => ({
   mockSafeStorage: {
@@ -51,7 +51,7 @@ describe('buildBackup', () => {
     expect(b.plaintextBackup).toBe(false)
     expect(typeof b.verifier).toBe('string')
     expect(b.verifier).not.toBe('')
-    expect(b.schemaVersion).toBe(3)
+    expect(b.schemaVersion).toBe(SCHEMA_VERSION)
     expect(b.plaintextRecordCount).toBe(0)
   })
 

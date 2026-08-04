@@ -14,7 +14,7 @@ import type { BrowserWindow } from 'electron'
 export type MockDb = Low<DbRoot> & { write: Mock; read: Mock }
 
 export function makeDb(keys: KeyRecord[] = [], metaOver: Partial<typeof DEFAULT_META> = {}): MockDb {
-  const data: DbRoot = { schemaVersion: 2, keys, meta: { ...DEFAULT_META, ...metaOver } }
+  const data: DbRoot = { schemaVersion: 2 as DbRoot['schemaVersion'], keys, meta: { ...DEFAULT_META, ...metaOver } }
   return { data, write: vi.fn(async () => {}), read: vi.fn(async () => {}) } as unknown as MockDb
 }
 
