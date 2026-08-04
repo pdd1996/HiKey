@@ -10,15 +10,18 @@
 
 import type { Low } from 'lowdb'
 import type { BrowserWindow } from 'electron'
-import type { DbRoot, KeyRecord, Meta } from '../storage/schema'
+import type { DbRoot, KeyRecord, Meta, Provider } from '../storage/schema'
 import type { ImportSession, ConfirmItem, PreviewRow } from '../import/types'
 import type { ApplyResult } from '../import/apply'
 import type { KeyInput, SafeKeyView, AddOutcome, UpdateOutcome, RemoveOutcome, RevealOutcome } from '../keys/types'
 import type { RestoreRejectReason } from '../backup/types'
 import type { CheckModeArg } from '../healthCheck/checker'
+import type { ProbeResult } from '../healthCheck/probe'
 
 /** re-export 供 preload/renderer 复用（status:update 载荷类型）。 */
 export type { SafeKeyView } from '../keys/types'
+/** re-export 供 preload/renderer 复用（keys:probe 结果类型）。 */
+export type { ProbeResult } from '../healthCheck/probe'
 
 /**
  * 调度器最小接口（handler 只用 checkNow/checkAll/reschedule）。
@@ -43,6 +46,7 @@ export const Channels = {
   keysReveal: 'keys:reveal',
   keysCheckNow: 'keys:checkNow',
   keysCheckAll: 'keys:checkAll',
+  keysProbe: 'keys:probe',
   importPickAndParse: 'import:pickAndParse',
   importConfirm: 'import:confirm',
   backupExport: 'backup:export',
@@ -148,6 +152,8 @@ export interface HikeyApi {
     reveal(id: string): Promise<RevealOutcome>
     checkNow(id: string, mode?: CheckModeArg): Promise<void>
     checkAll(mode?: CheckModeArg): Promise<void>
+    /** 表单"测试"：用明文配置跑一次 ping，不入库。 */
+    probe(input: { provider: Provider; baseUrl: string; secret: string }): Promise<ProbeResult>
   }
   import: {
     pickAndParse(): Promise<PickAndParseResult>

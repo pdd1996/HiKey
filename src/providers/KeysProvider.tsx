@@ -9,6 +9,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { SafeKeyView, KeyInput, AddOutcome, UpdateOutcome, RemoveOutcome, RevealOutcome } from '@main/keys/types'
 import type { KeyStatus } from '@main/storage/schema'
+import type { ProbeResult } from '@main/ipc/types'
 import type { Provider } from '@shared/providers'
 
 interface KeysContextValue {
@@ -28,6 +29,8 @@ interface KeysContextValue {
   checkNow: (id: string, mode: 'ping' | 'deep') => Promise<void>
   checkAll: (mode: 'ping' | 'deep') => Promise<void>
   reveal: (id: string) => Promise<RevealOutcome>
+  /** 表单"测试"：用明文配置跑一次 ping，不入库。 */
+  probe: (input: { provider: Provider; baseUrl: string; secret: string }) => Promise<ProbeResult>
 }
 
 const KeysContext = createContext<KeysContextValue | null>(null)
@@ -83,6 +86,10 @@ export function KeysProvider({ children }: { children: ReactNode }) {
   const checkNow = useCallback((id: string, mode: 'ping' | 'deep') => window.hikey.keys.checkNow(id, mode), [])
   const checkAll = useCallback((mode: 'ping' | 'deep') => window.hikey.keys.checkAll(mode), [])
   const reveal = useCallback((id: string) => window.hikey.keys.reveal(id), [])
+  const probe = useCallback(
+    (input: { provider: Provider; baseUrl: string; secret: string }) => window.hikey.keys.probe(input),
+    []
+  )
 
   // 排序：provider 字母序（稳定），筛选独立
   const visibleKeys = useMemo(() => {
@@ -109,6 +116,7 @@ export function KeysProvider({ children }: { children: ReactNode }) {
     checkNow,
     checkAll,
     reveal,
+    probe,
   }
 
   return <KeysContext.Provider value={value}>{children}</KeysContext.Provider>

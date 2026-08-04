@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { checkKey, type FetchImpl } from './checker'
+import { checkKey, fetchWithTimeout, type FetchImpl } from './checker'
 import type { KeyRecord, Meta } from '../storage/schema'
 
 // mock electron safeStorage：默认可用、可逆，与 crypto.test 同范式。
@@ -224,5 +224,26 @@ describe('checkKey', () => {
     const out = await checkKey(rec(), meta({ pingTimeoutMs: 10 }), 'manual', f, NOW, 'ping', undefined, clock)
     expect(out.status).toBe('unknown')
     expect(out.pingMs).toBeUndefined()
+  })
+})
+
+describe('fetchWithTimeout 失败 kind', () => {
+  it('timer 到期 → { ok:false, kind:"timeout" }', async () => {
+    const f = vi.fn(
+      async (_url: string, init: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          init.signal?.addEventListener('abort', () => reject(new Error('aborted')))
+        })
+    ) as unknown as FetchImpl
+    const res = await fetchWithTimeout('https://x', {}, 10, f)
+    expect(res).toEqual({ ok: false, kind: 'timeout' })
+  })
+
+  it('网络错误（fetch reject 非 abort）→ { ok:false, kind:"network" }', async () => {
+    const f = vi.fn(async () => {
+      throw new TypeError('fetch failed')
+    }) as unknown as FetchImpl
+    const res = await fetchWithTimeout('https://x', {}, 2000, f)
+    expect(res).toEqual({ ok: false, kind: 'network' })
   })
 })

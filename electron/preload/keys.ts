@@ -10,5 +10,6 @@ export const keys: HikeyApi['keys'] = {
   remove: (id) => ipcRenderer.invoke(Channels.keysRemove, id),
   reveal: (id) => ipcRenderer.invoke(Channels.keysReveal, id),
   checkNow: (id, mode) => ipcRenderer.invoke(Channels.keysCheckNow, id, mode),
-  checkAll: (mode) => ipcRenderer.invoke(Channels.keysCheckAll, mode)
+  checkAll: (mode) => ipcRenderer.invoke(Channels.keysCheckAll, mode),
+  probe: (input) => ipcRenderer.invoke(Channels.keysProbe, input)
 }

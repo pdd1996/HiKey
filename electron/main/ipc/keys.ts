@@ -12,11 +12,13 @@ import { listKeys } from '../keys/list'
 import { addKey, updateKey, removeKey } from '../keys/crud'
 import { revealKey } from '../keys/reveal'
 import { scheduleClipboardClear } from '../keys/clipboard'
+import { probeKey } from '../healthCheck/probe'
 import type { IpcDeps } from './types'
 import type { KeyInput, AddOutcome, UpdateOutcome, RemoveOutcome, RevealOutcome } from '../keys/types'
-import type { KeyRecord } from '../storage/schema'
+import type { KeyRecord, Provider } from '../storage/schema'
 import type { SafeKeyView } from '../keys/types'
 import type { CheckModeArg } from '../healthCheck/checker'
+import type { ProbeResult } from '../healthCheck/probe'
 
 /** 单条记录剥 encSecret 后的安全视图（status:update 载荷用，避免明文密文下发渲染进程）。 */
 export function toSafeView(record: KeyRecord): SafeKeyView {
@@ -77,4 +79,23 @@ export function handleCheckNow(deps: IpcDeps, id: string, mode: CheckModeArg = '
 
 export function handleCheckAll(deps: IpcDeps, mode: CheckModeArg = 'ping'): void {
   deps.scheduler.checkAll(mode)
+}
+
+/**
+ * 表单"测试"：用明文配置跑一次 ping，不入库、不创建记录、不改 lastChecked。
+ * timeout 取 meta.pingTimeoutMs；fetch 用 globalThis.fetch（与 scheduler 默认一致）；
+ * clock 复用注入的 now（便于测试）。结果由渲染进程内嵌卡片 + toast 展示。
+ */
+export async function handleProbe(
+  deps: IpcDeps,
+  input: { provider: Provider; baseUrl: string; secret: string }
+): Promise<ProbeResult> {
+  return probeKey({
+    provider: input.provider,
+    baseUrl: input.baseUrl,
+    secret: input.secret,
+    pingTimeoutMs: deps.db.data.meta.pingTimeoutMs,
+    fetchImpl: globalThis.fetch,
+    clock: deps.now
+  })
 }

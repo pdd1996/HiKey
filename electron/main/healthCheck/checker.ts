@@ -25,14 +25,17 @@ export interface CheckOutcome {
   pingMs?: number // ping 拿到 HTTP 响应时的延迟（ms）；未注入 clock 或网络失败时 undefined
 }
 
-/** fetch 结果：成功拿到响应（含非 2xx），或网络/超时/abort 失败。 */
-type FetchRes = { ok: true; status: number; body: unknown } | { ok: false }
+/** fetch 结果：成功拿到响应（含非 2xx），或失败。失败带 kind 区分超时与网络错误（probe 复用）。 */
+export type FetchRes =
+  | { ok: true; status: number; body: unknown }
+  | { ok: false; kind: 'network' | 'timeout' }
 
 /**
  * 带超时的 fetch。合并外部 signal（调度器取消用）与本地超时 controller。
- * 任一触发 → 抛 AbortError → 调用方归 unknown。
+ * 本地 timer 到期 → kind='timeout'；其余 catch 到的错误（含外部 abort）→ kind='network'。
+ * 成功时（含非 2xx）返回 status+body，调用方再走 classify。
  */
-async function fetchWithTimeout(
+export async function fetchWithTimeout(
   url: string,
   init: RequestInit,
   timeoutMs: number,
@@ -40,7 +43,11 @@ async function fetchWithTimeout(
   externalSignal?: AbortSignal
 ): Promise<FetchRes> {
   const local = new AbortController()
-  const timer = setTimeout(() => local.abort(), timeoutMs)
+  let timedOut = false
+  const timer = setTimeout(() => {
+    timedOut = true
+    local.abort()
+  }, timeoutMs)
   // 外部取消转发到本地
   if (externalSignal) {
     if (externalSignal.aborted) local.abort()
@@ -56,7 +63,7 @@ async function fetchWithTimeout(
     }
     return { ok: true, status: res.status, body }
   } catch {
-    return { ok: false }
+    return { ok: false, kind: timedOut ? 'timeout' : 'network' }
   } finally {
     clearTimeout(timer)
   }
