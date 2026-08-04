@@ -42,7 +42,7 @@ function AppShell() {
       />
       <main className="flex-1 overflow-auto">
         {view === 'dashboard' ? (
-          <div className="mx-auto max-w-6xl px-6">
+          <div className="mx-auto flex max-w-6xl flex-col gap-6 px-8 py-6">
             <FilterBar />
             <KeyTable
               keys={visibleKeys}

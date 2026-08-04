@@ -13,7 +13,7 @@ export function FilterBar() {
   const { providerFilter, setProviderFilter, statusFilter, setStatusFilter } = useKeys()
 
   return (
-    <div className="flex flex-wrap items-center gap-3 py-3">
+    <div className="flex flex-wrap items-center gap-3 pb-2">
       <Select
         value={providerFilter}
         onValueChange={(v) => setProviderFilter(v)}

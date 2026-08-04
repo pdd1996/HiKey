@@ -3,18 +3,19 @@
 // 开关类即时保存；间隔滑块在 onValueCommit 保存（避免拖动期间 IPC 刷屏）。
 
 import { useState } from 'react'
+import { Download, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
 import { useSettings } from '@/providers/SettingsProvider'
-import { BackupSection } from '@/components/BackupSection'
 
 const MIN_MIN = 5
 const MAX_MIN = 1440
 
 export function SettingsView() {
-  const { meta, encryptionAvailable, loading, setSettings } = useSettings()
+  const { meta, encryptionAvailable, loading, setSettings, exportBackup, restoreBackup } = useSettings()
   const [intervalDraft, setIntervalDraft] = useState<number | null>(null)
 
   if (loading || !meta) {
@@ -30,13 +31,33 @@ export function SettingsView() {
     else toast.error('保存失败', { description: out.reason })
   }
 
+  async function handleExport() {
+    const out = await exportBackup()
+    if (out.ok) {
+      toast.success('已导出加密备份', {
+        description: out.plaintextRecordCount > 0 ? `含 ${out.plaintextRecordCount} 条明文标记记录` : undefined,
+      })
+    } else if (out.reason !== 'cancelled') {
+      toast.error('导出失败', { description: out.reason })
+    }
+  }
+
+  async function handleRestore() {
+    const out = await restoreBackup()
+    if (out.ok) {
+      toast.success('已恢复备份', {
+        description: `迁移 ${out.migrated ? '是' : '否'}，重新加密 ${out.reencrypted} 条${out.rolledBack ? '（已回滚）' : ''}`,
+      })
+    } else if (out.reason !== 'cancelled') {
+      toast.error('恢复失败', { description: out.message })
+    }
+  }
+
   const intervalValue = intervalDraft ?? meta.checkIntervalMinutes
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8 p-6">
-      <section className="space-y-4">
-        <h2 className="text-base font-semibold">检测</h2>
-
+    <div className="mx-auto max-w-2xl space-y-6 p-6">
+      <SettingsCard title="检测">
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label>检测间隔</Label>
@@ -63,10 +84,9 @@ export function SettingsView() {
           checked={meta.deepCheckEnabled}
           onCheckedChange={(v) => void applySettings({ deepCheckEnabled: v })}
         />
-      </section>
+      </SettingsCard>
 
-      <section className="space-y-4">
-        <h2 className="text-base font-semibold">加密与明文</h2>
+      <SettingsCard title="加密与明文">
         <p className="text-xs text-muted-foreground">
           safeStorage 状态：<span className={encryptionAvailable ? 'text-green-600' : 'text-red-600'}>
             {encryptionAvailable ? '可用（密钥以密文存储）' : '不可用（密钥将以明文存储）'}
@@ -82,10 +102,31 @@ export function SettingsView() {
           disabled={plaintextLocked}
           onCheckedChange={(v) => void applySettings({ allowPlaintextFallback: v })}
         />
-      </section>
+      </SettingsCard>
 
-      <BackupSection />
+      <SettingsCard title="备份">
+        <p className="text-xs text-muted-foreground">
+          导出经加密的备份文件；从备份恢复时若备份含明文标记记录，主进程将二次确认。
+        </p>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleExport}>
+            <Download className="mr-2 h-4 w-4" /> 导出备份
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleRestore}>
+            <Upload className="mr-2 h-4 w-4" /> 从备份恢复
+          </Button>
+        </div>
+      </SettingsCard>
     </div>
+  )
+}
+
+function SettingsCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-5 rounded-lg border bg-card p-6 shadow-sm">
+      <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+      <div className="space-y-4">{children}</div>
+    </section>
   )
 }
 
