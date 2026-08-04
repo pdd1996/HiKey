@@ -3,14 +3,11 @@
 // 开关类即时保存；间隔滑块在 onValueCommit 保存（避免拖动期间 IPC 刷屏）。
 
 import { useState } from 'react'
-import { RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
 import { useSettings } from '@/providers/SettingsProvider'
-import { useKeys } from '@/providers/KeysProvider'
 import { BackupSection } from '@/components/BackupSection'
 
 const MIN_MIN = 5
@@ -18,7 +15,6 @@ const MAX_MIN = 1440
 
 export function SettingsView() {
   const { meta, encryptionAvailable, loading, setSettings } = useSettings()
-  const { checkAll } = useKeys()
   const [intervalDraft, setIntervalDraft] = useState<number | null>(null)
 
   if (loading || !meta) {
@@ -73,19 +69,6 @@ export function SettingsView() {
           checked={meta.deepCheckOnEveryPoll}
           onCheckedChange={(v) => void applySettings({ deepCheckOnEveryPoll: v })}
         />
-
-        <div className="flex items-center gap-2 pt-1">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              void checkAll('ping')
-              toast.info('已触发全部 Ping')
-            }}
-          >
-            <RefreshCw className="mr-2 h-4 w-4" /> 立即 Ping
-          </Button>
-        </div>
       </section>
 
       <section className="space-y-4">
