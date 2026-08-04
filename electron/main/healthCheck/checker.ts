@@ -13,12 +13,16 @@ import { classifyPing, classifyDeep } from './classify'
 export type CheckTrigger = 'add' | 'edit' | 'manual' | 'poll'
 export type FetchImpl = typeof globalThis.fetch
 
+/** 检测模式：ping=仅连通性；deep=ping 通过后再跑深检。与 trigger 解耦。 */
+export type CheckModeArg = 'ping' | 'deep'
+
 export interface CheckOutcome {
   status: KeyStatus
   lastChecked: number
   lastCheckMode: CheckMode
   lastDeepCheckedAt?: number
   lastError?: string
+  pingMs?: number // ping 拿到 HTTP 响应时的延迟（ms）；未注入 clock 或网络失败时 undefined
 }
 
 /** fetch 结果：成功拿到响应（含非 2xx），或网络/超时/abort 失败。 */
@@ -58,20 +62,14 @@ async function fetchWithTimeout(
   }
 }
 
-/** 深检前置条件（PRD FR-2 + 数据库设计 §6.2）。 */
-function shouldDeepCheck(record: KeyRecord, meta: Meta, trigger: CheckTrigger): boolean {
-  if (!meta.deepCheckEnabled) return false
-  if (!record.deepCheck) return false
-  if (trigger === 'poll' && !meta.deepCheckOnEveryPoll) return false
-  // custom 必填 testModel；空则跳过深检（用户决策）
-  if (!record.testModel) return false
-  return true
-}
-
 /**
  * 单 key 检测全流程。
  * @param now   调用方注入的时间戳（避免依赖 Date.now）
+ * @param mode   检测模式：'ping' 仅连通；'deep' ping 通过后跑深检（仅看 testModel，
+ *               bypass deepCheckEnabled/deepCheck/deepCheckOnEveryPoll 三个开关——
+ *               那些开关只在 scheduler 选 poll 的 mode 时生效）
  * @param signal 调度器的 per-key 取消信号（可选）
+ * @param clock  延迟计时注入（避免依赖 Date.now）；未注入则不记录 pingMs
  */
 export async function checkKey(
   record: KeyRecord,
@@ -79,7 +77,9 @@ export async function checkKey(
   trigger: CheckTrigger,
   fetchImpl: FetchImpl,
   now: number,
-  signal?: AbortSignal
+  mode: CheckModeArg = 'deep',
+  signal?: AbortSignal,
+  clock?: () => number
 ): Promise<CheckOutcome> {
   // 1. 解密 secret；失败 → unknown，不发网络（PRD FR-1 旧密文读取）
   const revealed = revealSecret(record.encSecret, record.secretMode)
@@ -93,7 +93,8 @@ export async function checkKey(
   }
   const apiKey = revealed.plaintext
 
-  // 2. ping
+  // 2. ping（同时计时延迟）
+  const t0 = clock?.()
   const pingRes = await fetchWithTimeout(
     buildPingUrl(record.provider, record.baseUrl),
     { method: 'GET', headers: buildHeaders(record.provider, apiKey) },
@@ -101,8 +102,9 @@ export async function checkKey(
     fetchImpl,
     signal
   )
+  const pingMs = clock && pingRes.ok ? Math.max(0, clock() - (t0 ?? 0)) : undefined
   if (!pingRes.ok) {
-    return { status: 'unknown', lastChecked: now, lastCheckMode: 'ping' }
+    return { status: 'unknown', lastChecked: now, lastCheckMode: 'ping', pingMs }
   }
   const ping = classifyPing(pingRes.status, pingRes.body)
   if (ping.status !== 'valid') {
@@ -110,13 +112,23 @@ export async function checkKey(
       status: ping.status,
       lastChecked: now,
       lastCheckMode: 'ping',
-      lastError: ping.lastError
+      lastError: ping.lastError,
+      pingMs
     }
   }
 
-  // 3. 深检前置
-  if (!shouldDeepCheck(record, meta, trigger)) {
-    return { status: 'valid', lastChecked: now, lastCheckMode: 'ping' }
+  // 3. 深检前置：mode='ping' 直接返回；mode='deep' 仅看 testModel（开关由 scheduler 在选 poll mode 时管）
+  if (mode === 'ping') {
+    return { status: 'valid', lastChecked: now, lastCheckMode: 'ping', pingMs }
+  }
+  if (!record.testModel) {
+    return {
+      status: 'valid',
+      lastChecked: now,
+      lastCheckMode: 'ping',
+      lastError: '深检需要 testModel',
+      pingMs
+    }
   }
 
   // 4. deep
@@ -133,7 +145,7 @@ export async function checkKey(
   )
   if (!deepRes.ok) {
     // 深检超时/网络异常 → unknown；记录深检已尝试
-    return { status: 'unknown', lastChecked: now, lastCheckMode: 'deep', lastDeepCheckedAt: now }
+    return { status: 'unknown', lastChecked: now, lastCheckMode: 'deep', lastDeepCheckedAt: now, pingMs }
   }
   const deep = classifyDeep(deepRes.status, deepRes.body)
   return {
@@ -141,6 +153,7 @@ export async function checkKey(
     lastChecked: now,
     lastCheckMode: 'deep',
     lastDeepCheckedAt: now,
-    lastError: deep.lastError
+    lastError: deep.lastError,
+    pingMs
   }
 }

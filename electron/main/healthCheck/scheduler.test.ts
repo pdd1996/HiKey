@@ -111,6 +111,47 @@ describe('Scheduler', () => {
     expect(db.data.keys.every((k) => k.lastCheckMode === 'ping')).toBe(true)
   })
 
+  it('poll 深检门控：deepCheckOnEveryPoll=true → 每Key 2次fetch(ping+deep)；=false → 1次', async () => {
+    const dbYes = makeDb([key()], { deepCheckEnabled: true, deepCheckOnEveryPoll: true })
+    const gateYes = makeGateFetch(200)
+    const schedYes = new Scheduler(dbYes, gateYes.impl)
+    schedYes.start()
+    await settle(gateYes)
+    expect(gateYes.calls.length).toBe(2) // ping + deep
+    expect(dbYes.data.keys[0].lastCheckMode).toBe('deep')
+
+    const dbNo = makeDb([key()], { deepCheckEnabled: true, deepCheckOnEveryPoll: false })
+    const gateNo = makeGateFetch(200)
+    const schedNo = new Scheduler(dbNo, gateNo.impl)
+    schedNo.start()
+    await settle(gateNo)
+    expect(gateNo.calls.length).toBe(1) // 仅 ping
+    expect(dbNo.data.keys[0].lastCheckMode).toBe('ping')
+  })
+
+  it('checkNow(mode=deep) 强制深检：bypass 开关', async () => {
+    const a = key({ deepCheck: false })
+    const db = makeDb([a], { deepCheckEnabled: false, deepCheckOnEveryPoll: false })
+    const gate = makeGateFetch(200)
+    const sched = new Scheduler(db, gate.impl)
+    sched.start()
+    await settle(gate)
+    // 启动 poll → ping（开关关）；手动 deep → 仍跑 deep
+    sched.checkNow(a.id, 'deep')
+    await settle(gate)
+    const r = db.data.keys.find((k) => k.id === a.id)!
+    expect(r.lastCheckMode).toBe('deep')
+  })
+
+  it('pingMs 落库：检测后 record.pingMs 有值（fake timer 下 Date.now 不变 → 0）', async () => {
+    const db = makeDb([key()], { deepCheckEnabled: false })
+    const gate = makeGateFetch(200)
+    const sched = new Scheduler(db, gate.impl)
+    sched.start()
+    await settle(gate)
+    expect(db.data.keys[0].pingMs).toBe(0)
+  })
+
   it('并发上限：4 key / cap=2，峰值在飞 ≤ 2', async () => {
     const db = makeDb([key(), key(), key(), key()], {
       concurrentChecks: 2,
@@ -160,7 +201,7 @@ describe('Scheduler', () => {
     sched.start()
     await flush()
     expect(gate.pending()).toBe(1)
-    sched.checkNow(a.id)
+    sched.checkNow(a.id, 'ping')
     await flush()
     // 旧请求被 abort（reject），新请求发出，共 2 次
     expect(gate.calls.length).toBe(2)
@@ -180,7 +221,7 @@ describe('Scheduler', () => {
     sched.start()
     await flush()
     expect(gate.calls.length).toBe(3)
-    sched.checkAll()
+    sched.checkAll('ping')
     await flush()
     expect(gate.calls.length).toBe(6) // 旧 3 被弃 + 新 3
     await settle(gate)

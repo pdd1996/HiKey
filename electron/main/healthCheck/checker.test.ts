@@ -84,58 +84,62 @@ describe('checkKey', () => {
     expect(f).toHaveBeenCalledTimes(1)
   })
 
-  it('ping valid + 全局 deepCheckEnabled=false → 仅 ping', async () => {
+  it('mode=ping + 全局 deepCheckEnabled=true → 仅 ping（mode 决定，不看开关）', async () => {
     const f = fetchSeq({ status: 200 })
-    const out = await checkKey(rec(), meta({ deepCheckEnabled: false }), 'manual', f, NOW)
+    const out = await checkKey(rec(), meta(), 'manual', f, NOW, 'ping')
     expect(out.status).toBe('valid')
     expect(out.lastCheckMode).toBe('ping')
     expect(out.lastDeepCheckedAt).toBeUndefined()
     expect(f).toHaveBeenCalledTimes(1)
   })
 
-  it('ping valid + 记录 deepCheck=false → 仅 ping', async () => {
-    const f = fetchSeq({ status: 200 })
-    const out = await checkKey(rec({ deepCheck: false }), meta(), 'manual', f, NOW)
-    expect(out.lastCheckMode).toBe('ping')
-    expect(f).toHaveBeenCalledTimes(1)
-  })
-
-  it('poll trigger + deepCheckOnEveryPoll=false → 不深检；=true → 深检', async () => {
-    const fNo = fetchSeq({ status: 200 })
-    const outNo = await checkKey(rec(), meta({ deepCheckOnEveryPoll: false }), 'poll', fNo, NOW)
-    expect(outNo.lastCheckMode).toBe('ping')
-    expect(fNo).toHaveBeenCalledTimes(1)
-
-    const fYes = fetchSeq({ status: 200 }, { status: 200 })
-    const outYes = await checkKey(
-      rec(),
-      meta({ deepCheckOnEveryPoll: true }),
-      'poll',
-      fYes,
-      NOW
-    )
-    expect(outYes.lastCheckMode).toBe('deep')
-    expect(fYes).toHaveBeenCalledTimes(2)
-  })
-
-  it('manual trigger 即便 deepCheckOnEveryPoll=false 也深检', async () => {
+  it('mode=deep 强制深检：bypass deepCheckEnabled/deepCheck/deepCheckOnEveryPoll', async () => {
+    // 三个开关全关，mode=deep 仍跑深检
     const f = fetchSeq({ status: 200 }, { status: 200 })
-    const out = await checkKey(rec(), meta({ deepCheckOnEveryPoll: false }), 'manual', f, NOW)
+    const out = await checkKey(
+      rec({ deepCheck: false }),
+      meta({ deepCheckEnabled: false, deepCheckOnEveryPoll: false }),
+      'poll',
+      f,
+      NOW,
+      'deep'
+    )
     expect(out.lastCheckMode).toBe('deep')
+    expect(f).toHaveBeenCalledTimes(2)
   })
 
-  it('custom + testModel 空 → ping valid 但跳过深检', async () => {
+  it('mode=deep + testModel 空 → ping valid 但跳过深检 + 提示', async () => {
     const f = fetchSeq({ status: 200 })
     const out = await checkKey(
       rec({ provider: 'custom', baseUrl: 'https://myproxy.com', testModel: '' }),
       meta(),
       'manual',
       f,
-      NOW
+      NOW,
+      'deep'
     )
     expect(out.status).toBe('valid')
     expect(out.lastCheckMode).toBe('ping')
+    expect(out.lastError).toBe('深检需要 testModel')
     expect(f).toHaveBeenCalledTimes(1)
+  })
+
+  it('poll + mode=ping → 仅 ping；poll + mode=deep → 深检（poll 门控由 scheduler 选 mode）', async () => {
+    const fNo = fetchSeq({ status: 200 })
+    const outNo = await checkKey(rec(), meta(), 'poll', fNo, NOW, 'ping')
+    expect(outNo.lastCheckMode).toBe('ping')
+    expect(fNo).toHaveBeenCalledTimes(1)
+
+    const fYes = fetchSeq({ status: 200 }, { status: 200 })
+    const outYes = await checkKey(rec(), meta(), 'poll', fYes, NOW, 'deep')
+    expect(outYes.lastCheckMode).toBe('deep')
+    expect(fYes).toHaveBeenCalledTimes(2)
+  })
+
+  it('manual + 默认 mode=deep → 深检（开关不挡手动）', async () => {
+    const f = fetchSeq({ status: 200 }, { status: 200 })
+    const out = await checkKey(rec(), meta({ deepCheckOnEveryPoll: false }), 'manual', f, NOW)
+    expect(out.lastCheckMode).toBe('deep')
   })
 
   it('safeStorage 不可用 + safeStorage 密文 → unknown + 无法解密旧记录，不发网络', async () => {
@@ -191,7 +195,34 @@ describe('checkKey', () => {
 
   it('时间戳用注入的 now，不依赖 Date.now', async () => {
     const f = fetchSeq({ status: 200 })
-    const out = await checkKey(rec(), meta({ deepCheckEnabled: false }), 'manual', f, 12345)
+    const out = await checkKey(rec(), meta(), 'manual', f, 12345, 'ping')
     expect(out.lastChecked).toBe(12345)
+  })
+
+  it('注入 clock → pingMs = 两次 clock() 之差（ping 成功）', async () => {
+    const f = fetchSeq({ status: 200, body: { data: [] } })
+    let t = 1000
+    const clock = () => (t += 150) // 首调 t0=1150，fetch 后 t1=1300 → 150ms
+    const out = await checkKey(rec(), meta(), 'manual', f, NOW, 'ping', undefined, clock)
+    expect(out.pingMs).toBe(150)
+  })
+
+  it('不注入 clock → pingMs undefined', async () => {
+    const f = fetchSeq({ status: 200 })
+    const out = await checkKey(rec(), meta(), 'manual', f, NOW, 'ping')
+    expect(out.pingMs).toBeUndefined()
+  })
+
+  it('ping 网络失败（超时）→ pingMs undefined，即便注入 clock', async () => {
+    const f = vi.fn(
+      async (_url: string, init: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          init.signal?.addEventListener('abort', () => reject(new Error('aborted')))
+        })
+    ) as unknown as FetchImpl
+    const clock = vi.fn(() => 1000)
+    const out = await checkKey(rec(), meta({ pingTimeoutMs: 10 }), 'manual', f, NOW, 'ping', undefined, clock)
+    expect(out.status).toBe('unknown')
+    expect(out.pingMs).toBeUndefined()
   })
 })
