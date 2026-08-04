@@ -15,7 +15,7 @@ interface TitleBarProps {
 export function TitleBar({ view, onViewChange, onAdd, onImport, onCheckAll }: TitleBarProps) {
   return (
     <div className="flex items-center justify-between border-b px-6 py-3">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-1 leading-tight">
         <h1 className="text-lg font-semibold">HiKey</h1>
         <span className="text-xs text-muted-foreground">本地优先的 LLM API Key 管理面板</span>
       </div>

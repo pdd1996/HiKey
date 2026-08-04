@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { StatusBadge } from '@/components/StatusBadge'
 import { ProviderBadge } from '@/components/ProviderBadge'
-import { formatRelative, formatCheckMode, formatPingMs } from '@/lib/format'
+import { formatRelative, formatPingMs } from '@/lib/format'
 import type { SafeKeyView } from '@main/keys/types'
 
 interface KeyRowProps {
@@ -27,7 +27,6 @@ export function KeyRow({ k, onReveal, onEdit, onRemove, onCheckNow }: KeyRowProp
       <TableCell><ProviderBadge provider={k.provider} /></TableCell>
       <TableCell><StatusBadge status={k.status} /></TableCell>
       <TableCell className="text-muted-foreground">{formatRelative(k.lastChecked)}</TableCell>
-      <TableCell className="text-muted-foreground">{formatCheckMode(k.lastCheckMode)}</TableCell>
       <TableCell className="text-muted-foreground">{formatPingMs(k.pingMs)}</TableCell>
       <TableCell className="text-right">
         <DropdownMenu>

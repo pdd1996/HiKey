@@ -29,8 +29,7 @@ export function KeyTable({ keys, loading, onReveal, onEdit, onRemove, onCheckNow
           <TableHead>名称</TableHead>
           <TableHead>供应商</TableHead>
           <TableHead>状态</TableHead>
-          <TableHead>最后检测</TableHead>
-          <TableHead>检测模式</TableHead>
+          <TableHead>最新检测</TableHead>
           <TableHead>延迟</TableHead>
           <TableHead className="text-right">操作</TableHead>
         </TableRow>
