@@ -1,4 +1,4 @@
-// 设置页（PRD §9）：检测间隔滑块(5-1440) / 深检开关 / 轮询深检开关 /
+// 设置页（PRD §9）：检测间隔滑块(5-1440) / 轮询深检开关 /
 // 明文降级开关（safeStorage 不可用且存在明文记录时置灰）/ 立即重检 / 备份。
 // 开关类即时保存；间隔滑块在 onValueCommit 保存（避免拖动期间 IPC 刷屏）。
 
@@ -58,16 +58,10 @@ export function SettingsView() {
         </div>
 
         <ToggleRow
-          label="轮询深度检测"
-          desc="轮询时附加一次模型调用以验证 key 可用性（仅影响轮询；行内「深检」不受此限）。"
+          label="轮询深检"
+          desc="开启后每次定时轮询都追加深检（一次模型调用）；关闭则轮询仅测连通性。新增/编辑/手动「深检」不受此限。"
           checked={meta.deepCheckEnabled}
           onCheckedChange={(v) => void applySettings({ deepCheckEnabled: v })}
-        />
-        <ToggleRow
-          label="轮询深检"
-          desc="每次轮询都执行深检（关闭则轮询仅 Ping；行内「深检」始终可手动触发）。"
-          checked={meta.deepCheckOnEveryPoll}
-          onCheckedChange={(v) => void applySettings({ deepCheckOnEveryPoll: v })}
         />
       </section>
 
