@@ -279,17 +279,16 @@ export function KeyFormDialog({ open, onOpenChange, mode, editKey }: KeyFormDial
           )}
 
           <DialogFooter>
+            <Button type="button" variant="outline" className="mr-auto" onClick={() => onOpenChange(false)}>
+              取消
+            </Button>
             <Button
               type="button"
               variant="outline"
-              className="mr-auto"
               disabled={form.formState.isSubmitting || testState.phase === 'pending' || testDisabled}
               onClick={() => void handleTest()}
             >
               {testState.phase === 'pending' ? '测试中…' : '测试'}
-            </Button>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              取消
             </Button>
             <Button type="submit" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting ? '保存中…' : '保存'}
