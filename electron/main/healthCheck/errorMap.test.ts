@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { extractErrorCode, isQuotaError } from './errorMap'
+import { extractErrorCode } from './errorMap'
 
 describe('extractErrorCode', () => {
   it('取 error.code', () => {
@@ -42,41 +42,5 @@ describe('extractErrorCode', () => {
 
   it('code 为非字符串 → null', () => {
     expect(extractErrorCode({ error: { code: 403 } })).toBeNull()
-  })
-})
-
-describe('isQuotaError', () => {
-  it('insufficient_quota 命中', () => {
-    expect(isQuotaError({ error: { code: 'insufficient_quota' } })).toBe(true)
-  })
-
-  it('Anthropic 403 billing_not_active 命中', () => {
-    expect(isQuotaError({ error: { type: 'billing_not_active' } })).toBe(true)
-  })
-
-  it('含 quota 子串命中（如 daily_quota_exceeded）', () => {
-    expect(isQuotaError({ error: { code: 'daily_quota_exceeded' } })).toBe(true)
-  })
-
-  it('exhausted 命中', () => {
-    expect(isQuotaError({ error: { message: 'x', code: 'quota_exhausted' } })).toBe(true)
-  })
-
-  it('balance 命中', () => {
-    expect(isQuotaError({ error: { type: 'insufficient_balance' } })).toBe(true)
-  })
-
-  it('rate_limit_exceeded 不命中', () => {
-    expect(isQuotaError({ error: { type: 'rate_limit_exceeded' } })).toBe(false)
-  })
-
-  it('invalid_api_key 不命中', () => {
-    expect(isQuotaError({ error: { code: 'invalid_api_key' } })).toBe(false)
-  })
-
-  it('无 body / 无 error 不命中', () => {
-    expect(isQuotaError(null)).toBe(false)
-    expect(isQuotaError({})).toBe(false)
-    expect(isQuotaError({ error: {} })).toBe(false)
   })
 })

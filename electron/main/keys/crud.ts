@@ -1,9 +1,9 @@
-// 增改删（PRD FR-4 列表与详情管理）
+// 增改删（M8.2 改造：新 key 不设 status，换 secret 清空 status）
 //
 // add/update/remove：内存修改 + syncPlaintextMode，调用方负责 db.write()（与
 // import/apply.ts 一致，纯逻辑不碰 db 实例）。不触发检测——M5 IPC 保存后调 checkNow。
 //
-// update secret 语义：仅当传入新 secret 时重加密 + 重置 status='unchecked' + 清
+// update secret 语义：仅当传入新 secret 时重加密 + 清 status + 清
 // lastChecked/lastCheckMode/lastDeepCheckedAt/lastError（与 import 覆盖一致）；
 // secret 未传则保留旧 secret + 旧 status（M5 保存后 checkNow 刷新）。
 // fail-closed：safeStorage 不可用 + 未开降级 → 拒绝写新 secret，不改库。
@@ -31,7 +31,6 @@ export function addKey(root: DbRoot, input: KeyInput, now: number): AddOutcome {
     baseUrl: input.baseUrl.trim(),
     encSecret: enc.encSecret,
     secretMode: enc.mode,
-    status: 'unchecked',
     deepCheck: input.deepCheck ?? true,
     testModel: input.testModel?.trim() || DEFAULT_TEST_MODEL[input.provider],
     createdAt: now,
@@ -70,7 +69,7 @@ export function updateKey(root: DbRoot, id: string, input: KeyInput, now: number
   if (newEnc) {
     rec.encSecret = newEnc.encSecret
     rec.secretMode = newEnc.mode
-    rec.status = 'unchecked'
+    rec.status = undefined
     rec.lastChecked = undefined
     rec.lastCheckMode = undefined
     rec.lastDeepCheckedAt = undefined

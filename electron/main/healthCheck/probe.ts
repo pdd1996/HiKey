@@ -8,7 +8,7 @@ import { buildPingUrl } from './urls'
 import { buildHeaders } from './headers'
 import { classifyPing } from './classify'
 import { fetchWithTimeout, type FetchImpl } from './checker'
-import type { Provider, KeyStatus } from '../storage/schema'
+import type { Provider } from '../storage/schema'
 
 export type ProbeInput = {
   provider: Provider
@@ -28,7 +28,7 @@ export type ProbeInput = {
  * - ok:false → 网络错误或超时（reason 区分），pingMs 仍记录往返（即便失败）。
  */
 export type ProbeResult =
-  | { ok: true; status: KeyStatus; pingMs?: number; lastError?: string }
+  | { ok: true; status: string; pingMs?: number; lastError?: string }
   | { ok: false; reason: 'network' | 'timeout'; pingMs?: number }
 
 /**

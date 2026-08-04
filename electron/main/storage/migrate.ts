@@ -1,9 +1,9 @@
-// schema 迁移 + 启动归位（数据库设计 §5 + §6.3）
+// schema 迁移（M8.2 改造：v2→v3 旧状态映射为 HTTP 码）
 //
-// §5：启动读 schemaVersion（字段缺失视为 0），低于当前（2）则迁移并写回；
-//     未知 provider（如历史 gemini）标记为 custom 并在 lastError 写迁移说明；
-//     迁移失败中止启动、不破坏原库（由 db.ts 保证：仅成功后写回）。
-// §6.3：每次启动无条件将遗留 checking 归位为 unchecked（上次检测未完成，结果未知）。
+// v2→v3 迁移：旧 KeyStatus 值映射为 HTTP 码或删除。
+//   valid → 200, invalid → 401, rate_limited → 429, quota_exceeded → 402,
+//   unknown → 500, checking/unchecked → 删除（设为 undefined）。
+// 迁移失败中止启动、不破坏原库（由 db.ts 保证：仅成功后写回）。
 
 import {
   SCHEMA_VERSION,
@@ -19,6 +19,17 @@ type LooseRoot = {
   schemaVersion?: number
   keys?: unknown[]
   meta?: Partial<Meta>
+}
+
+/** 旧 KeyStatus → HTTP 码映射表。不在表中的值（含 undefined）保持不变。 */
+const STATUS_MIGRATION: Record<string, string | undefined> = {
+  valid: '200',
+  invalid: '401',
+  rate_limited: '429',
+  quota_exceeded: '402',
+  unknown: '500',
+  checking: undefined,
+  unchecked: undefined,
 }
 
 /** 迁移并归位。返回是否发生变更（决定是否写回）。 */
@@ -57,21 +68,25 @@ export function migrate(root: DbRoot): { changed: boolean } {
         changed = true
       }
     }
+    // v2→v3：旧 KeyStatus 映射为 HTTP 码
+    for (const raw of root.keys) {
+      const k = raw as { status?: string }
+      if (k.status !== undefined && k.status in STATUS_MIGRATION) {
+        const newStatus = STATUS_MIGRATION[k.status]
+        if (newStatus === undefined) {
+          delete k.status
+        } else {
+          k.status = newStatus
+        }
+        changed = true
+      }
+    }
   }
 
   // 提升版本号到当前
   if (loose.schemaVersion !== SCHEMA_VERSION) {
-    ;(root as { schemaVersion: 2 }).schemaVersion = SCHEMA_VERSION
+    ;(root as { schemaVersion: 3 }).schemaVersion = SCHEMA_VERSION
     changed = true
-  }
-
-  // 归位：遗留 checking → unchecked（§6.3，每次启动无条件）
-  for (const raw of root.keys) {
-    const k = raw as { status?: string }
-    if (k.status === 'checking') {
-      k.status = 'unchecked'
-      changed = true
-    }
   }
 
   return { changed }

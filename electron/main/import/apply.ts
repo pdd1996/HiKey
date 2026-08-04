@@ -5,7 +5,7 @@
 // 不调 checkKey、不碰 scheduler——导入不立即检测，由用户重检/调度（PRD FR-3）。
 //
 // 覆盖（已确认决策）：仅更新 name/baseUrl/secret，保留 testModel/notes/id/createdAt；
-//   secret 重写后 status='unchecked'，清 lastChecked/lastCheckMode/lastDeepCheckedAt/lastError。
+//   secret 重写后 status=undefined，清 lastChecked/lastCheckMode/lastDeepCheckedAt/lastError。
 // 复用 getDb() 单实例写互斥（M2 契约）。
 
 import { randomUUID } from 'crypto'
@@ -74,7 +74,6 @@ export async function applyImport(
         baseUrl: item.baseUrl,
         encSecret: enc.encSecret,
         secretMode: enc.mode,
-        status: 'unchecked',
         deepCheck: true,
         testModel: DEFAULT_TEST_MODEL[item.provider],
         createdAt: now,
@@ -114,7 +113,7 @@ export async function applyImport(
       rec.encSecret = enc.encSecret
       rec.secretMode = enc.mode
       // secret 已变 → 旧检测结果失效
-      rec.status = 'unchecked'
+      rec.status = undefined
       rec.lastChecked = undefined
       rec.lastCheckMode = undefined
       rec.lastDeepCheckedAt = undefined

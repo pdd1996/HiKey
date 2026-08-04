@@ -31,14 +31,14 @@ function legacyRoot(): DbRoot {
 }
 
 describe('migrate', () => {
-  it('schemaVersion 0 + gemini + checking → 迁移为 custom、归位 unchecked、版本升到 2', () => {
+  it('schemaVersion 0 + gemini + checking → 迁移为 custom、删除 status、版本升到 3', () => {
     const root = legacyRoot()
     const { changed } = migrate(root)
     expect(changed).toBe(true)
     expect(root.schemaVersion).toBe(SCHEMA_VERSION)
     const k = root.keys[0]
     expect(k.provider).toBe('custom')
-    expect(k.status).toBe('unchecked')
+    expect(k.status).toBeUndefined()
     expect(k.lastError).toContain('原 provider=gemini')
     expect(k.lastError).toContain('已迁移为 custom')
   })
@@ -60,7 +60,7 @@ describe('migrate', () => {
           baseUrl: 'https://api.openai.com',
           encSecret: 'x',
           secretMode: 'safeStorage',
-          status: 'valid',
+          status: '200',
           deepCheck: true,
           testModel: 'gpt-4o-mini',
           createdAt: 1,
@@ -70,30 +70,6 @@ describe('migrate', () => {
       meta: { ...DEFAULT_META }
     }
     expect(migrate(root).changed).toBe(false)
-    expect(root.keys[0].status).toBe('valid')
-  })
-
-  it('当前版本但仍含遗留 checking → 归位为 unchecked 且 changed=true', () => {
-    const root: DbRoot = {
-      schemaVersion: SCHEMA_VERSION,
-      keys: [
-        {
-          id: 'k',
-          name: 'n',
-          provider: 'openai',
-          baseUrl: 'https://api.openai.com',
-          encSecret: 'x',
-          secretMode: 'safeStorage',
-          status: 'checking',
-          deepCheck: true,
-          testModel: 'gpt-4o-mini',
-          createdAt: 1,
-          updatedAt: 1
-        }
-      ],
-      meta: { ...DEFAULT_META }
-    }
-    expect(migrate(root).changed).toBe(true)
-    expect(root.keys[0].status).toBe('unchecked')
+    expect(root.keys[0].status).toBe('200')
   })
 })

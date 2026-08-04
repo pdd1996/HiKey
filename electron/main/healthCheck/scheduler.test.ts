@@ -107,7 +107,7 @@ describe('Scheduler', () => {
     const sched = new Scheduler(db, gate.impl)
     sched.start()
     await settle(gate)
-    expect(db.data.keys.every((k) => k.status === 'valid')).toBe(true)
+    expect(db.data.keys.every((k) => k.status === '200')).toBe(true)
     expect(db.data.keys.every((k) => k.lastCheckMode === 'ping')).toBe(true)
   })
 
@@ -167,7 +167,7 @@ describe('Scheduler', () => {
     await flush()
     expect(gate.maxPending()).toBe(2)
     await settle(gate)
-    expect(db.data.keys.every((k) => k.status === 'valid')).toBe(true)
+    expect(db.data.keys.every((k) => k.status === '200')).toBe(true)
   })
 
   it('上一轮未完成 → 下一轮 tick 静默跳过（无新 fetch）', async () => {
@@ -207,7 +207,7 @@ describe('Scheduler', () => {
     expect(gate.calls.length).toBe(2)
     await settle(gate)
     const r = db.data.keys.find((k) => k.id === a.id)!
-    expect(r.status).toBe('valid')
+    expect(r.status).toBe('200')
   })
 
   it('checkAll 取消当前轮并重发（fetch 翻倍，最终全 valid）', async () => {
@@ -225,7 +225,7 @@ describe('Scheduler', () => {
     await flush()
     expect(gate.calls.length).toBe(6) // 旧 3 被弃 + 新 3
     await settle(gate)
-    expect(db.data.keys.every((k) => k.status === 'valid')).toBe(true)
+    expect(db.data.keys.every((k) => k.status === '200')).toBe(true)
   })
 
   it('写库后 syncPlaintextMode 同步 meta.plaintextMode', async () => {

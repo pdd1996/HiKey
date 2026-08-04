@@ -41,7 +41,7 @@ describe('initStorage', () => {
     expect(second).toEqual(first)
   })
 
-  it('历史库（schemaVersion 0 + gemini + checking）→ 迁移并持久化', async () => {
+  it('历史库（schemaVersion 0 + gemini）→ 迁移并持久化', async () => {
     const legacy = {
       schemaVersion: 0,
       keys: [
@@ -52,7 +52,7 @@ describe('initStorage', () => {
           baseUrl: 'https://generativelanguage.googleapis.com',
           encSecret: 'enc',
           secretMode: 'safeStorage',
-          status: 'checking',
+          status: 'unchecked',
           deepCheck: true,
           testModel: 'gemini-1.5',
           createdAt: 1,
@@ -81,7 +81,6 @@ describe('initStorage', () => {
     }
     expect(onDisk.schemaVersion).toBe(SCHEMA_VERSION)
     expect(onDisk.keys[0].provider).toBe('custom')
-    expect(onDisk.keys[0].status).toBe('unchecked')
     expect(onDisk.keys[0].lastError).toContain('原 provider=gemini')
   })
 

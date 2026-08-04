@@ -10,7 +10,7 @@ function key(over: Partial<KeyRecord> = {}): KeyRecord {
     baseUrl: 'https://api.openai.com',
     encSecret: 'enc-secret-blob',
     secretMode: 'safeStorage' as SecretMode,
-    status: 'valid',
+    status: '200',
     lastChecked: 100,
     lastCheckMode: 'deep',
     lastDeepCheckedAt: 100,
@@ -40,7 +40,7 @@ describe('listKeys', () => {
     expect(v.secretMode).toBe('plaintext')
     expect(v.lastError).toBe('E')
     expect(v.name).toBe('n')
-    expect(v.status).toBe('valid')
+    expect(v.status).toBe('200')
     expect(v.lastChecked).toBe(100)
   })
 

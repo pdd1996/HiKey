@@ -66,19 +66,19 @@ beforeEach(() => {
 })
 
 describe('checkKey', () => {
-  it('openai ping+deep 全通过 → valid + deep 模式', async () => {
+  it('openai ping+deep 全通过 → 200 + deep 模式', async () => {
     const f = fetchSeq({ status: 200, body: { data: [] } }, { status: 200 })
     const out = await checkKey(rec(), meta(), 'manual', f, NOW)
-    expect(out.status).toBe('valid')
+    expect(out.status).toBe('200')
     expect(out.lastCheckMode).toBe('deep')
     expect(out.lastDeepCheckedAt).toBe(NOW)
     expect(f).toHaveBeenCalledTimes(2)
   })
 
-  it('ping 401 → invalid，不发 deep（fetch 只调 1 次）', async () => {
+  it('ping 401 → 401，不发 deep（fetch 只调 1 次）', async () => {
     const f = fetchSeq({ status: 401, body: { error: { code: 'invalid_api_key' } } })
     const out = await checkKey(rec(), meta(), 'manual', f, NOW)
-    expect(out.status).toBe('invalid')
+    expect(out.status).toBe('401')
     expect(out.lastCheckMode).toBe('ping')
     expect(out.lastError).toBe('401 / invalid_api_key')
     expect(f).toHaveBeenCalledTimes(1)
@@ -87,7 +87,7 @@ describe('checkKey', () => {
   it('mode=ping + 全局 deepCheckEnabled=true → 仅 ping（mode 决定，不看开关）', async () => {
     const f = fetchSeq({ status: 200 })
     const out = await checkKey(rec(), meta(), 'manual', f, NOW, 'ping')
-    expect(out.status).toBe('valid')
+    expect(out.status).toBe('200')
     expect(out.lastCheckMode).toBe('ping')
     expect(out.lastDeepCheckedAt).toBeUndefined()
     expect(f).toHaveBeenCalledTimes(1)
@@ -108,7 +108,7 @@ describe('checkKey', () => {
     expect(f).toHaveBeenCalledTimes(2)
   })
 
-  it('mode=deep + testModel 空 → ping valid 但跳过深检 + 提示', async () => {
+  it('mode=deep + testModel 空 → ping 200 但跳过深检 + 提示', async () => {
     const f = fetchSeq({ status: 200 })
     const out = await checkKey(
       rec({ provider: 'custom', baseUrl: 'https://myproxy.com', testModel: '' }),
@@ -118,7 +118,7 @@ describe('checkKey', () => {
       NOW,
       'deep'
     )
-    expect(out.status).toBe('valid')
+    expect(out.status).toBe('200')
     expect(out.lastCheckMode).toBe('ping')
     expect(out.lastError).toBe('深检需要 testModel')
     expect(f).toHaveBeenCalledTimes(1)
@@ -142,11 +142,11 @@ describe('checkKey', () => {
     expect(out.lastCheckMode).toBe('deep')
   })
 
-  it('safeStorage 不可用 + safeStorage 密文 → unknown + 无法解密旧记录，不发网络', async () => {
+  it('safeStorage 不可用 + safeStorage 密文 → 500 + 无法解密旧记录，不发网络', async () => {
     mockSafeStorage._setAvailable(false)
     const f = fetchSeq({ status: 200 })
     const out = await checkKey(rec(), meta(), 'manual', f, NOW)
-    expect(out.status).toBe('unknown')
+    expect(out.status).toBe('500')
     expect(out.lastError).toBe('无法解密旧记录')
     expect(f).not.toHaveBeenCalled()
     mockSafeStorage._setAvailable(true)
@@ -161,11 +161,11 @@ describe('checkKey', () => {
       f,
       NOW
     )
-    expect(out.status).toBe('valid')
+    expect(out.status).toBe('200')
     expect(out.lastCheckMode).toBe('deep')
   })
 
-  it('ping 超时 → unknown', async () => {
+  it('ping 超时 → timeout', async () => {
     // fetch 永不主动 resolve，仅响应 signal abort
     const f = vi.fn(
       async (_url: string, init: RequestInit) =>
@@ -174,22 +174,22 @@ describe('checkKey', () => {
         })
     ) as unknown as FetchImpl
     const out = await checkKey(rec(), meta({ pingTimeoutMs: 10 }), 'manual', f, NOW)
-    expect(out.status).toBe('unknown')
+    expect(out.status).toBe('timeout')
     expect(out.lastCheckMode).toBe('ping')
   })
 
-  it('deep 400 → 状态保持 valid + 模型/配置 lastError', async () => {
+  it('deep 400 → 400 + lastError', async () => {
     const f = fetchSeq({ status: 200 }, { status: 400, body: { error: { code: 'model_not_found' } } })
     const out = await checkKey(rec(), meta(), 'manual', f, NOW)
-    expect(out.status).toBe('valid')
+    expect(out.status).toBe('400')
     expect(out.lastCheckMode).toBe('deep')
-    expect(out.lastError).toBe('深检未通过：模型/配置问题，建议更换 testModel')
+    expect(out.lastError).toBe('400 / model_not_found')
   })
 
-  it('ping 402 无 body → quota_exceeded', async () => {
+  it('ping 402 无 body → 402', async () => {
     const f = fetchSeq({ status: 402, body: null })
     const out = await checkKey(rec(), meta(), 'manual', f, NOW)
-    expect(out.status).toBe('quota_exceeded')
+    expect(out.status).toBe('402')
     expect(out.lastCheckMode).toBe('ping')
   })
 
@@ -222,7 +222,7 @@ describe('checkKey', () => {
     ) as unknown as FetchImpl
     const clock = vi.fn(() => 1000)
     const out = await checkKey(rec(), meta({ pingTimeoutMs: 10 }), 'manual', f, NOW, 'ping', undefined, clock)
-    expect(out.status).toBe('unknown')
+    expect(out.status).toBe('timeout')
     expect(out.pingMs).toBeUndefined()
   })
 })

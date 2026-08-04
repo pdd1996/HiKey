@@ -8,7 +8,6 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { SafeKeyView, KeyInput, AddOutcome, UpdateOutcome, RemoveOutcome, RevealOutcome } from '@main/keys/types'
-import type { KeyStatus } from '@main/storage/schema'
 import type { ProbeResult } from '@main/ipc/types'
 import type { Provider } from '@shared/providers'
 
@@ -17,9 +16,9 @@ interface KeysContextValue {
   loading: boolean
   // 筛选
   providerFilter: Provider | 'all'
-  statusFilter: KeyStatus | 'all'
+  statusFilter: string
   setProviderFilter: (p: Provider | 'all') => void
-  setStatusFilter: (s: KeyStatus | 'all') => void
+  setStatusFilter: (s: string) => void
   visibleKeys: SafeKeyView[]
   // 操作
   refresh: () => Promise<void>
@@ -39,7 +38,7 @@ export function KeysProvider({ children }: { children: ReactNode }) {
   const [keys, setKeys] = useState<SafeKeyView[]>([])
   const [loading, setLoading] = useState(true)
   const [providerFilter, setProviderFilter] = useState<Provider | 'all'>('all')
-  const [statusFilter, setStatusFilter] = useState<KeyStatus | 'all'>('all')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
 
   const refresh = useCallback(async () => {
     try {

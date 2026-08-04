@@ -34,32 +34,32 @@ function base(over: Partial<ProbeInput> = {}): ProbeInput {
 }
 
 describe('probeKey', () => {
-  it('200 → valid + pingMs', async () => {
+  it('200 → 200 + pingMs', async () => {
     let t = 1000
     const clock = () => (t += 150) // t0=1150，fetch 后 t1=1300 → 150
     const out = await probeKey(base({ fetchImpl: fetchSeq({ status: 200, body: { data: [] } }), clock }))
-    expect(out).toEqual({ ok: true, status: 'valid', pingMs: 150 })
+    expect(out).toEqual({ ok: true, status: '200', pingMs: 150 })
   })
 
-  it('401 invalid_api_key → invalid + lastError', async () => {
+  it('401 invalid_api_key → 401 + lastError', async () => {
     const out = await probeKey(base({ fetchImpl: fetchSeq({ status: 401, body: { error: { code: 'invalid_api_key' } } }) }))
     expect(out.ok).toBe(true)
     if (out.ok) {
-      expect(out.status).toBe('invalid')
+      expect(out.status).toBe('401')
       expect(out.lastError).toBe('401 / invalid_api_key')
     }
   })
 
-  it('402 → quota_exceeded', async () => {
+  it('402 → 402', async () => {
     const out = await probeKey(base({ fetchImpl: fetchSeq({ status: 402, body: null }) }))
     expect(out.ok).toBe(true)
-    if (out.ok) expect(out.status).toBe('quota_exceeded')
+    if (out.ok) expect(out.status).toBe('402')
   })
 
-  it('429 非欠费 → rate_limited', async () => {
+  it('429 非欠费 → 429', async () => {
     const out = await probeKey(base({ fetchImpl: fetchSeq({ status: 429, body: { error: { message: 'slow down' } } }) }))
     expect(out.ok).toBe(true)
-    if (out.ok) expect(out.status).toBe('rate_limited')
+    if (out.ok) expect(out.status).toBe('429')
   })
 
   it('网络错误（fetch reject 非 abort）→ { ok:false, reason:"network" }', async () => {

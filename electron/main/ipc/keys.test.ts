@@ -156,11 +156,11 @@ describe('keys CRUD 接线', () => {
   })
 
   it('toSafeView 剥 encSecret 保留其余字段', () => {
-    const k = makeKey({ name: 'nn', status: 'valid' })
+    const k = makeKey({ name: 'nn', status: '200' })
     const view = toSafeView(k)
     expect(view).not.toHaveProperty('encSecret')
     expect(view.name).toBe('nn')
-    expect(view.status).toBe('valid')
+    expect(view.status).toBe('200')
     expect(view.secretMode).toBe('safeStorage')
   })
 })
@@ -170,7 +170,7 @@ describe('handleProbe 接线', () => {
 
   it('透传 meta.pingTimeoutMs + globalThis.fetch + deps.now 作 clock，返回 probeKey 结果', async () => {
     const mocked = vi.mocked(probeKey)
-    mocked.mockResolvedValue({ ok: true, status: 'valid', pingMs: 42 })
+    mocked.mockResolvedValue({ ok: true, status: '200', pingMs: 42 })
     const deps = makeDeps()
     const out = await handleProbe(deps, { provider: 'openai', baseUrl: 'https://api.openai.com', secret: 'sk-x' })
     expect(mocked).toHaveBeenCalledTimes(1)
@@ -182,7 +182,7 @@ describe('handleProbe 接线', () => {
       fetchImpl: globalThis.fetch,
       clock: deps.now
     })
-    expect(out).toEqual({ ok: true, status: 'valid', pingMs: 42 })
+    expect(out).toEqual({ ok: true, status: '200', pingMs: 42 })
   })
 
   it('自定义 pingTimeoutMs 生效；失败结果原样透传', async () => {
