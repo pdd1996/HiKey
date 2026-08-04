@@ -3,7 +3,7 @@
 // 安排 60s 比对清除；UI 文案说明系统剪贴板历史可能保留。
 
 import { useEffect, useState } from 'react'
-import { Copy } from 'lucide-react'
+import { ShieldAlert, Copy, Check } from 'lucide-react'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from '@/components/ui/dialog'
@@ -21,12 +21,14 @@ export function RevealDialog({ open, onOpenChange, k }: RevealDialogProps) {
   const { reveal } = useKeys()
   const [result, setResult] = useState<RevealOutcome | null>(null)
   const [busy, setBusy] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   // 关闭时清空状态
   useEffect(() => {
     if (!open) {
       setResult(null)
       setBusy(false)
+      setCopied(false)
     }
   }, [open])
 
@@ -41,13 +43,24 @@ export function RevealDialog({ open, onOpenChange, k }: RevealDialogProps) {
     }
   }
 
+  async function handleCopy() {
+    if (!result?.ok) return
+    try {
+      await navigator.clipboard.writeText(result.plaintext)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1500)
+    } catch {
+      // 剪贴板写入失败（如未授权），静默；用户可手动选中复制
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[560px]">
         <DialogHeader>
           <DialogTitle>查看明文</DialogTitle>
           <DialogDescription>
-            将一次性显示该 key 的明文，并已复制到系统剪贴板。
+            将一次性显示 key 的明文。
           </DialogDescription>
         </DialogHeader>
 
@@ -56,9 +69,10 @@ export function RevealDialog({ open, onOpenChange, k }: RevealDialogProps) {
             <p className="text-sm">
               确认查看 <span className="font-medium">{k?.name}</span> 的明文？
             </p>
-            <p className="text-xs text-muted-foreground">
-              明文仅显示一次，关闭后需再次确认；主进程将在约 60s 后比对剪贴板内容，若仍为本次复制的 key 则清除。
-            </p>
+            <div className="flex items-start gap-2 rounded-md border border-dashed bg-background px-3 py-2 text-xs text-muted-foreground">
+              <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
+              <span>明文仅显示一次，关闭后需再次确认；主进程将在约 60s 后比对剪贴板内容，若仍为本次复制的 key 则清除。</span>
+            </div>
           </div>
         )}
 
@@ -67,9 +81,7 @@ export function RevealDialog({ open, onOpenChange, k }: RevealDialogProps) {
             <div className="break-all rounded-md border bg-muted/50 p-3 font-mono text-sm">
               {result.plaintext}
             </div>
-            <p className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Copy className="h-3.5 w-3.5" /> 已复制到剪贴板，约 60s 后由主进程比对清除；系统剪贴板历史可能保留。
-            </p>
+
           </div>
         )}
 
@@ -90,7 +102,23 @@ export function RevealDialog({ open, onOpenChange, k }: RevealDialogProps) {
               </Button>
             </>
           )}
-          {result && (
+          {result && result.ok && (
+            <>
+              <Button variant="outline" onClick={handleCopy} disabled={busy}>
+                {copied ? (
+                  <>
+                    <Check className="mr-2 h-4 w-4" /> 已复制
+                  </>
+                ) : (
+                  <>
+                    <Copy className="mr-2 h-4 w-4" /> 复制
+                  </>
+                )}
+              </Button>
+              <Button onClick={() => onOpenChange(false)}>关闭</Button>
+            </>
+          )}
+          {result && !result.ok && (
             <Button onClick={() => onOpenChange(false)}>关闭</Button>
           )}
         </DialogFooter>
