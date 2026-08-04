@@ -1,15 +1,14 @@
-// 调度器：并发 / 超时 / 轮询 / 取消（PRD FR-2 调度 + 数据库设计 §6）
+// 调度器：并发 / 超时 / 轮询 / 取消（M8.2 改造：不再写 checking 状态）
 //
 // 职责：
 //   - 启动即首检一轮，再按 meta.checkIntervalMinutes 递归 setTimeout 排下一轮。
 //   - 并发上限 meta.concurrentChecks（共享 Semaphore，round 与 checkNow/checkAll 共用）。
 //   - 同 key 不重叠：per-key AbortController + launched 表覆盖队列态与在飞态。
 //   - 上一轮未完成 → tick 静默跳过本轮。
-//   - checkNow(id)：仅取消该 key 在飞 + 重发 manual 检测（不计入"影响其他 key"）。
+//   - checkNow(id)：仅取消该 key 在飞 + 重发 manual 检测。
 //   - checkAll()：自增 generation 使旧轮在飞/排队结果全部丢弃，重发一轮 manual。
 //   - best-effort：stop() abort 全部在飞、清 timer，未完成检测丢弃，不损坏数据。
-//   - 写库：检测前 status=checking（落库，重启归位 unchecked），完成后写结果 +
-//     syncPlaintextMode + 原子 db.write()，再触发 onUpdate 回调（M5 接 status:update）。
+//   - 写库：检测完成后直接写结果 + syncPlaintextMode + 原子 db.write()，再触发 onUpdate 回调。
 //
 // 不接 IPC（留 M5）：onUpdate 仅留钩子，reschedule 留给 M5 settings:set 调用。
 
@@ -199,10 +198,6 @@ export class Scheduler {
       controller = new AbortController()
       const record = this.findRecord(id)
       if (!record) return
-      // 先落库 checking（await 确保写入完成后再发网络，避免 applyOutcome
-      // 在 checking 写入执行前就改写 status，导致 checking 状态不上盘/不触发 onUpdate）
-      await this.markChecking(id)
-      if (aborted || gen !== this.generation || this.stopped) return
       // poll 触发：按开关决定是否深检；manual 触发：用调用方传入的 mode
       const effectiveMode: CheckModeArg =
         trigger === 'poll'
@@ -230,15 +225,6 @@ export class Scheduler {
     }
   }
 
-  private async markChecking(id: string): Promise<void> {
-    const r = this.findRecord(id)
-    if (!r) return
-    r.status = 'checking'
-    r.updatedAt = Date.now()
-    // checking 写入不改变 secretMode，跳过 syncPlaintextMode 扫描
-    await this.persist(id, true)
-  }
-
   private async applyOutcome(id: string, outcome: CheckOutcome): Promise<void> {
     const r = this.findRecord(id)
     if (!r) return
@@ -253,11 +239,10 @@ export class Scheduler {
   }
 
   /**
-   * 落库：原子写 + onUpdate 回调。仅在结果写入时同步 plaintextMode
-   * （检测不改变 secretMode，checking 写入跳过以省去无意义的全表扫描）。
+   * 落库：原子写 + onUpdate 回调。
    */
-  private async persist(id: string, skipSyncPlaintext = false): Promise<void> {
-    if (!skipSyncPlaintext) syncPlaintextMode(this.db.data)
+  private async persist(id: string): Promise<void> {
+    syncPlaintextMode(this.db.data)
     await this.db.write()
     const r = this.findRecord(id)
     if (r) this.hooks.onUpdate?.(id, r)
