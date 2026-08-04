@@ -16,7 +16,7 @@ export function FilterBar() {
     <div className="flex flex-wrap items-center gap-3 py-3">
       <Select
         value={providerFilter}
-        onValueChange={(v) => setProviderFilter(v as typeof providerFilter)}
+        onValueChange={(v) => setProviderFilter(v)}
       >
         <SelectTrigger className="w-[160px]">
           <SelectValue placeholder="供应商" />
@@ -31,7 +31,7 @@ export function FilterBar() {
 
       <Select
         value={statusFilter}
-        onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}
+        onValueChange={(v) => setStatusFilter(v)}
       >
         <SelectTrigger className="w-[160px]">
           <SelectValue placeholder="状态" />

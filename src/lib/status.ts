@@ -1,10 +1,8 @@
-// 状态徽标 / provider 徽标 配色与文案（PRD §9）
+// 状态徽标 / provider 徽标 配色与文案（M8.2 改造：HTTP 码直存）
 //
-// 状态配色：checking 蓝 / valid 绿 / invalid 红 / rate_limited 黄 /
-//           quota_exceeded 橙 / unknown·unchecked 灰。
+// 状态配色：200 绿 / 4xx 红橙黄 / 5xx 灰 / network_error·timeout 灰。
 // 选用软底色（bg-*-100 text-*-700 border-*-200）配合 slate 主题，不破坏 shadcn Badge 基础样式。
 
-import type { KeyStatus } from '@main/storage/schema'
 import type { Provider } from '@shared/providers'
 
 export interface BadgeStyle {
@@ -12,49 +10,30 @@ export interface BadgeStyle {
   className: string
 }
 
-const STATUS_STYLES: Record<KeyStatus, BadgeStyle> = {
-  checking: {
-    label: '检测中',
-    className: 'border-blue-200 bg-blue-100 text-blue-700',
-  },
-  valid: {
-    label: '有效',
-    className: 'border-green-200 bg-green-100 text-green-700',
-  },
-  invalid: {
-    label: '无效',
-    className: 'border-red-200 bg-red-100 text-red-700',
-  },
-  rate_limited: {
-    label: '限流',
-    className: 'border-yellow-200 bg-yellow-100 text-yellow-700',
-  },
-  quota_exceeded: {
-    label: '配额超限',
-    className: 'border-orange-200 bg-orange-100 text-orange-700',
-  },
-  unknown: {
-    label: '未知',
-    className: 'border-gray-200 bg-gray-100 text-gray-600',
-  },
-  unchecked: {
-    label: '未检测',
-    className: 'border-gray-200 bg-gray-100 text-gray-600',
-  },
+/** HTTP 码 → 徽标样式。不在表中的码 fallback 到灰色"未知"。 */
+const STATUS_STYLES: Record<string, BadgeStyle> = {
+  '200':           { label: '成功',     className: 'border-green-200 bg-green-100 text-green-700' },
+  '400':           { label: '格式错误', className: 'border-red-200 bg-red-100 text-red-700' },
+  '401':           { label: '认证失败', className: 'border-red-200 bg-red-100 text-red-700' },
+  '402':           { label: '余额不足', className: 'border-orange-200 bg-orange-100 text-orange-700' },
+  '429':           { label: '请求超限', className: 'border-yellow-200 bg-yellow-100 text-yellow-700' },
+  '500':           { label: '服务器失败', className: 'border-gray-200 bg-gray-100 text-gray-600' },
+  '503':           { label: '服务器故障', className: 'border-gray-200 bg-gray-100 text-gray-600' },
+  'network_error': { label: '网络错误', className: 'border-gray-200 bg-gray-100 text-gray-600' },
+  'timeout':       { label: '超时',     className: 'border-gray-200 bg-gray-100 text-gray-600' },
 }
 
-export function statusBadge(status: KeyStatus): BadgeStyle {
-  return STATUS_STYLES[status] ?? STATUS_STYLES.unknown
+/**
+ * 取状态徽标样式。undefined = 未检测。
+ * 未知码 fallback 到灰色"未知"。
+ */
+export function statusBadge(status?: string): BadgeStyle {
+  if (status === undefined) return { label: '未检测', className: 'border-gray-200 bg-gray-100 text-gray-600' }
+  return STATUS_STYLES[status] ?? { label: `未知 (${status})`, className: 'border-gray-200 bg-gray-100 text-gray-600' }
 }
 
-export const STATUS_ORDER: KeyStatus[] = [
-  'checking',
-  'valid',
-  'invalid',
-  'rate_limited',
-  'quota_exceeded',
-  'unknown',
-  'unchecked',
+export const STATUS_ORDER: string[] = [
+  '200', '400', '401', '402', '429', '500', '503', 'network_error', 'timeout',
 ]
 
 const PROVIDER_LABEL: Record<Provider, string> = {

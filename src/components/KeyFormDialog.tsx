@@ -139,7 +139,7 @@ export function KeyFormDialog({ open, onOpenChange, mode, editKey }: KeyFormDial
     try {
       const result = await probe({ provider: form.getValues('provider'), baseUrl, secret })
       setTestState({ phase: 'done', result })
-      if (result.ok && result.status === 'valid') {
+      if (result.ok && result.status === '200') {
         toast.success('测试通过', { description: result.pingMs != null ? `有效 (${result.pingMs} ms)` : '有效' })
       } else if (result.ok) {
         toast.error(statusBadge(result.status).label, { description: result.lastError })
@@ -302,8 +302,8 @@ export function KeyFormDialog({ open, onOpenChange, mode, editKey }: KeyFormDial
 }
 
 /**
- * 测试结果内嵌条：按 KeyStatus 配色 + 文案（复用 statusBadge 保持与列表徽标一致）。
- * valid 绿 / invalid 红 / quota_exceeded 橙 / rate_limited 黄 / unknown·失败 灰。
+ * 测试结果内嵌条：按 HTTP 码配色 + 文案（复用 statusBadge 保持与列表徽标一致）。
+ * 200 绿 / 4xx 红橙黄 / 5xx 灰 / network_error·timeout 灰。
  */
 function TestResultBar({
   phase,
@@ -326,15 +326,15 @@ function TestResultBar({
     const badge = statusBadge(result.status)
     const ms = result.pingMs != null ? ` (${result.pingMs} ms)` : ''
     const icon =
-      result.status === 'valid' ? (
+      result.status === '200' ? (
         <Check className="h-3.5 w-3.5" />
       ) : (
         <X className="h-3.5 w-3.5" />
       )
     const label =
-      result.status === 'valid'
+      result.status === '200'
         ? `有效${ms}`
-        : result.status === 'invalid'
+        : result.status === '401'
           ? '认证失败'
           : badge.label
     return (
