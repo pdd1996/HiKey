@@ -1,12 +1,6 @@
-import { MoreHorizontal, Eye, Pencil, Trash2, RefreshCw, Activity } from 'lucide-react'
+import { Eye, Pencil, Trash2, Activity } from 'lucide-react'
 import { TableRow, TableCell } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from '@/components/ui/dropdown-menu'
 import { StatusBadge } from '@/components/StatusBadge'
 import { ProviderBadge } from '@/components/ProviderBadge'
 import { formatRelative, formatPingMs } from '@/lib/format'
@@ -29,30 +23,48 @@ export function KeyRow({ k, onReveal, onEdit, onRemove, onCheckNow }: KeyRowProp
       <TableCell className="text-muted-foreground">{formatRelative(k.lastChecked)}</TableCell>
       <TableCell className="text-muted-foreground">{formatPingMs(k.pingMs)}</TableCell>
       <TableCell className="text-right">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onReveal(k)}>
-              <Eye className="mr-2 h-4 w-4" /> 查看明文
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onEdit(k)}>
-              <Pencil className="mr-2 h-4 w-4" /> 编辑
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onCheckNow(k.id, 'ping')}>
-              <RefreshCw className="mr-2 h-4 w-4" /> Ping
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onCheckNow(k.id, 'deep')}>
-              <Activity className="mr-2 h-4 w-4" /> 深检
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onRemove(k)} className="text-destructive">
-              <Trash2 className="mr-2 h-4 w-4" /> 删除
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="inline-flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => onReveal(k)}
+            title="查看明文"
+            aria-label="查看明文"
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => onEdit(k)}
+            title="编辑"
+            aria-label="编辑"
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => onCheckNow(k.id, 'deep')}
+            title="深检"
+            aria-label="深检"
+          >
+            <Activity className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-destructive hover:text-destructive"
+            onClick={() => onRemove(k)}
+            title="删除"
+            aria-label="删除"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       </TableCell>
     </TableRow>
   )
