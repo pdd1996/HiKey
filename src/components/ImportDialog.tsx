@@ -3,7 +3,7 @@
 // session 仅存主进程内存，confirm 后删除。
 
 import { useEffect, useState } from 'react'
-import { Upload, FileUp } from 'lucide-react'
+import { Upload, FileUp, FileText, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
@@ -101,19 +101,42 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
         <DialogHeader>
           <DialogTitle>导入 Key</DialogTitle>
           <DialogDescription>
-            从 .env / .json 文件导入。明文仅在主进程内存暂存，确认后写入。
+            从 .env / .json 文件导入
           </DialogDescription>
         </DialogHeader>
 
         {stage === 'pick' && (
-          <div className="space-y-3 py-4">
-            <p className="text-sm text-muted-foreground">
-              支持解析标准 <code>.env</code>（OPENAI_API_KEY / ANTHROPIC_API_KEY / DEEPSEEK_API_KEY 等）与 key 数组 <code>.json</code>。
-            </p>
-            {error && <p className="text-sm text-destructive">解析失败：{error}</p>}
-            <Button onClick={handlePick} disabled={busy}>
-              <FileUp className="mr-2 h-4 w-4" /> {busy ? '处理中…' : '选择文件'}
-            </Button>
+          <div className="space-y-4 py-2">
+            <div className="flex items-start gap-3 rounded-lg border bg-muted/30 p-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                <FileText className="h-4 w-4" />
+              </div>
+              <div className="space-y-1 text-sm">
+                <p className="font-medium leading-none">支持的文件格式</p>
+                <p className="text-muted-foreground leading-relaxed">
+                  标准 <code className="rounded bg-muted px-1 py-0.5 text-xs">.env</code>（如
+                  <code className="rounded bg-muted px-1 py-0.5 text-xs">DEEPSEEK_API_KEY</code>），
+                  以及 <code className="rounded bg-muted px-1 py-0.5 text-xs">.json</code>。
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2 rounded-md border border-dashed bg-background px-3 py-2 text-xs text-muted-foreground">
+              <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
+              <span>明文仅在主进程内存暂存，确认后再写入；不落本地日志。</span>
+            </div>
+
+            {error && (
+              <p className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                解析失败：{error}
+              </p>
+            )}
+
+            <div className="flex justify-end pt-1">
+              <Button onClick={handlePick} disabled={busy} className="min-w-[140px]">
+                <FileUp className="mr-2 h-4 w-4" /> {busy ? '处理中…' : '选择文件'}
+              </Button>
+            </div>
           </div>
         )}
 
