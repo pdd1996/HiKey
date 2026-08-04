@@ -38,6 +38,7 @@ export interface KeyRecord {
   lastCheckMode?: CheckMode
   lastDeepCheckedAt?: number // 与 lastChecked 分开
   lastError?: string // 脱敏，绝不包含明文 key
+  pingMs?: number // ping 延迟（拿到 HTTP 响应时记录；网络/超时失败留 undefined）
   deepCheck: boolean // 与全局 deepCheckEnabled AND
   testModel: string // custom 无默认，其余 provider 预设
   createdAt: number

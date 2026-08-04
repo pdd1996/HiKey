@@ -38,7 +38,7 @@ function AppShell() {
         onViewChange={setView}
         onAdd={() => setAddOpen(true)}
         onImport={() => setImportOpen(true)}
-        onCheckAll={() => void checkAll()}
+        onCheckAll={(mode) => void checkAll(mode)}
       />
       <main className="flex-1 overflow-auto">
         {view === 'dashboard' ? (
@@ -50,7 +50,7 @@ function AppShell() {
               onReveal={(k) => { setRevealKey(k); setRevealOpen(true) }}
               onEdit={(k) => { setEditKey(k); setEditOpen(true) }}
               onRemove={(k) => { setDeleteTarget(k); setDeleteOpen(true) }}
-              onCheckNow={checkNow}
+              onCheckNow={(id, mode) => checkNow(id, mode)}
             />
           </div>
         ) : (

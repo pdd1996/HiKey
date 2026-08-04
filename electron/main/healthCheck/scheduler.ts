@@ -17,7 +17,7 @@ import type { Low } from 'lowdb'
 import type { DbRoot, KeyRecord, Meta } from '../storage/schema'
 import { getDb } from '../storage/db'
 import { syncPlaintextMode } from '../storage/plaintext'
-import { checkKey, type CheckTrigger, type FetchImpl, type CheckOutcome } from './checker'
+import { checkKey, type CheckTrigger, type FetchImpl, type CheckOutcome, type CheckModeArg } from './checker'
 
 export interface SchedulerHooks {
   /** 单 key 落库后回调（M5 接 IPC status:update）。 */
@@ -121,22 +121,22 @@ export class Scheduler {
     if (!this.stopped) this.scheduleNext()
   }
 
-  /** 单条立即检测：取消该 key 在飞，重发 manual。计入共享并发。 */
-  checkNow(id: string): void {
+  /** 单条立即检测：取消该 key 在飞，重发 manual。mode 默认 ping（轻）。计入共享并发。 */
+  checkNow(id: string, mode: CheckModeArg = 'ping'): void {
     if (this.stopped) return
     if (!this.findRecord(id)) return
     this.abortKey(id)
-    void this.runOne(id, 'manual')
+    void this.runOne(id, 'manual', mode)
   }
 
-  /** 立即全部重检：取消当前轮所有在飞，重发一轮 manual。 */
-  checkAll(): void {
+  /** 立即全部重检：取消当前轮所有在飞，重发一轮 manual。mode 默认 ping。 */
+  checkAll(mode: CheckModeArg = 'ping'): void {
     if (this.stopped) return
     this.generation++ // 旧轮排队/在飞结果全部丢弃
     for (const launch of this.launched.values()) launch.abort()
     this.launched.clear()
     this.roundRunning = false
-    void this.runRound('manual')
+    void this.runRound('manual', mode)
   }
 
   // ---- 内部 ----
@@ -160,21 +160,27 @@ export class Scheduler {
     }, intervalMs)
   }
 
-  /** 跑一轮：对所有 key 发起 trigger 检测。 */
-  private async runRound(trigger: CheckTrigger): Promise<void> {
+  /** 跑一轮：对所有 key 发起 trigger 检测。manual 轮用传入 mode；poll 轮忽略 mode、按开关 per-key 算。 */
+  private async runRound(trigger: CheckTrigger, mode: CheckModeArg = 'ping'): Promise<void> {
     if (this.roundRunning) return
     this.roundRunning = true
     const myGen = this.generation
     const ids = this.keys.map((k) => k.id)
-    await Promise.allSettled(ids.map((id) => this.runOne(id, trigger, myGen)))
+    await Promise.allSettled(ids.map((id) => this.runOne(id, trigger, mode, myGen)))
     // 仅当代际未变（未被 checkAll 取代）才清 roundRunning
     if (this.generation === myGen) this.roundRunning = false
   }
 
   /**
    * 单 key 检测任务。gen 默认当前代际；runRound 传其捕获的 myGen 以便 checkAll 取代后丢弃。
+   * poll 触发时按全局/单 key 开关算 mode（忽略传入值）；manual 触发用传入 mode。
    */
-  private async runOne(id: string, trigger: CheckTrigger, gen: number = this.generation): Promise<void> {
+  private async runOne(
+    id: string,
+    trigger: CheckTrigger,
+    mode: CheckModeArg = 'ping',
+    gen: number = this.generation
+  ): Promise<void> {
     if (this.stopped) return
     let aborted = false
     let controller: AbortController | undefined
@@ -197,13 +203,22 @@ export class Scheduler {
       // 在 checking 写入执行前就改写 status，导致 checking 状态不上盘/不触发 onUpdate）
       await this.markChecking(id)
       if (aborted || gen !== this.generation || this.stopped) return
+      // poll 触发：按开关决定是否深检；manual 触发：用调用方传入的 mode
+      const effectiveMode: CheckModeArg =
+        trigger === 'poll'
+          ? this.meta.deepCheckEnabled && record.deepCheck && this.meta.deepCheckOnEveryPoll
+            ? 'deep'
+            : 'ping'
+          : mode
       const outcome = await checkKey(
         record,
         this.meta,
         trigger,
         this.fetchImpl,
         Date.now(),
-        controller.signal
+        effectiveMode,
+        controller.signal,
+        Date.now
       )
       // 在飞期间被 abort 或代际取代 → 丢弃结果不写库
       if (aborted || gen !== this.generation || this.stopped) return
@@ -232,6 +247,7 @@ export class Scheduler {
     r.lastCheckMode = outcome.lastCheckMode
     if (outcome.lastDeepCheckedAt !== undefined) r.lastDeepCheckedAt = outcome.lastDeepCheckedAt
     r.lastError = outcome.lastError
+    if (outcome.pingMs !== undefined) r.pingMs = outcome.pingMs
     r.updatedAt = Date.now()
     await this.persist(id)
   }

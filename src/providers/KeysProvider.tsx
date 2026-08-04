@@ -25,8 +25,8 @@ interface KeysContextValue {
   addKey: (input: KeyInput) => Promise<AddOutcome>
   updateKey: (id: string, input: KeyInput) => Promise<UpdateOutcome>
   removeKey: (id: string) => Promise<RemoveOutcome>
-  checkNow: (id: string) => Promise<void>
-  checkAll: () => Promise<void>
+  checkNow: (id: string, mode: 'ping' | 'deep') => Promise<void>
+  checkAll: (mode: 'ping' | 'deep') => Promise<void>
   reveal: (id: string) => Promise<RevealOutcome>
 }
 
@@ -80,8 +80,8 @@ export function KeysProvider({ children }: { children: ReactNode }) {
     return out
   }, [])
 
-  const checkNow = useCallback((id: string) => window.hikey.keys.checkNow(id), [])
-  const checkAll = useCallback(() => window.hikey.keys.checkAll(), [])
+  const checkNow = useCallback((id: string, mode: 'ping' | 'deep') => window.hikey.keys.checkNow(id, mode), [])
+  const checkAll = useCallback((mode: 'ping' | 'deep') => window.hikey.keys.checkAll(mode), [])
   const reveal = useCallback((id: string) => window.hikey.keys.reveal(id), [])
 
   // 排序：provider 字母序（稳定），筛选独立
