@@ -96,8 +96,8 @@
 
 **第二级：深度检测（消耗极少量 token）**
 - 执行前提：**仅在 ping=valid 后执行**；ping 非 valid（invalid/rate_limited/quota_exceeded/unknown）则直接结束、不深检，避免对限流/失效 key 雪上加霜
-- 触发时机：新增/编辑保存后、手动"立即检测"时触发；**默认轮询只做一级 ping，不触发深度检测**（避免规则歧义和深检次数失控）；"状态迁移不反向触发深检"（即 ping 改变状态后不会因此自动追加一次深检，深检本身也改状态，避免字面矛盾）；用户可在设置开启"轮询深检"开关（见调度），开启后每轮对满足前置条件的记录追加深检
-- 前置条件：深检执行需同时满足"全局 `deepCheckEnabled` 开 + 该记录 `deepCheck=true` + ping=valid"，否则只做 ping；新增记录的 `deepCheck` 默认 true；轮询深检同样适用此前置条件
+- 触发时机：新增/编辑保存后、手动"立即检测"时触发（始终深检，不受开关限制）；**默认轮询只做一级 ping，不触发深度检测**（避免规则歧义和深检次数失控）；"状态迁移不反向触发深检"（即 ping 改变状态后不会因此自动追加一次深检，深检本身也改状态，避免字面矛盾）；用户可在设置开启"轮询深检"开关（见调度），开启后每轮对满足前置条件的记录追加深检
+- 前置条件：轮询深检执行需同时满足"全局 `deepCheckEnabled` 开 + 该记录 `deepCheck=true` + ping=valid"，否则轮询只做 ping；新增/编辑/手动触发的深检不受 `deepCheckEnabled` 限制；新增记录的 `deepCheck` 默认 true
 - OpenAI：`POST {baseUrl}/v1/chat/completions`，body 含 `model`、`messages`、`max_tokens: 1`
 - Anthropic：`POST {baseUrl}/v1/messages`，headers 含 `x-api-key` + `anthropic-version`，body 含 `model`、`max_tokens: 1`、`messages`
 - DeepSeek：`POST {baseUrl}/v1/chat/completions`，默认测试模型 `deepseek-chat`
@@ -114,7 +114,7 @@
 **调度**
 - 应用启动后开始调度；关窗即退出，不做托盘常驻
 - 默认 15 分钟轮询一次（可配，范围 5~1440 分钟）；每轮默认只做一级 ping，深度检测按上述触发时机执行
-- 设置提供"轮询深检"开关，开启后每轮对满足前置条件（全局 `deepCheckEnabled` 开 + 记录 `deepCheck=true`）的记录追加深度检测
+- 设置提供"轮询深检"开关（`deepCheckEnabled`，默认关），开启后每轮对满足前置条件（记录 `deepCheck=true` + ping=valid）的记录追加深度检测；关闭则轮询仅 ping
 - 并发上限默认 4，同一 Key 不重叠检测；轮询场景：上一轮未完成时跳过本轮（静默）；手动"立即全部重检"：取消当前轮所有未完成检测并重新发起，按钮显示"重检中"；单条"立即检测"：仅取消该 Key 自身的在飞检测，不影响其他 Key
 - status 枚举新增 `checking`：检测进行中显示为 checking，避免按钮"重检中"但状态还停在旧值；检测完成或超时后写入最终状态
 - 启动归位：应用启动时，将所有遗留 `checking` 状态归位为 `unchecked`（上次检测未完成，结果未知），避免重启后卡在 checking
@@ -144,8 +144,7 @@
 
 ### FR-5 设置
 - 检测间隔（分钟，5~1440，默认 15）
-- 深度检测开关（全局 `deepCheckEnabled`，默认开）
-- 轮询深检开关（`deepCheckOnEveryPoll`，默认关）
+- 轮询深检开关（`deepCheckEnabled`，默认关；开启后每次定时轮询追加深检，关闭则轮询仅 ping；新增/编辑/手动深检不受此限）
 - 明文降级开关（默认关，开启需二次确认；**仅当 `safeStorage.isEncryptionAvailable()` 返回 false 时显示且可开**；safeStorage 不可用时该开关开启后不可关闭（置灰），需 safeStorage 恢复并完成重加密后才回到可关状态）
 - 立即全部重检按钮
 
@@ -240,8 +239,7 @@
 ```json
 {
   "checkIntervalMinutes": 15,
-  "deepCheckEnabled": true,
-  "deepCheckOnEveryPoll": false,
+  "deepCheckEnabled": false,
   "concurrentChecks": 4,
   "pingTimeoutMs": 2000,
   "deepTimeoutMs": 2000,
@@ -265,7 +263,7 @@
 
 **查看明文**：点"查看" -> 二次确认弹窗 -> 显示明文 + 复制按钮 -> 关闭即弃（渲染进程不缓存）；复制后由主进程在 60 秒后比对剪贴板内容，仍为本次复制的 key 才清除，否则不动；UI 提示系统剪贴板历史可能保留。
 
-**设置页**：检测间隔滑块、深度检测开关、轮询深检开关、明文降级开关、立即重检。
+**设置页**：检测间隔滑块、轮询深检开关、明文降级开关、立即重检。
 
 **备份**：设置页提供导出加密备份、从备份恢复，均走主进程文件对话框。
 
@@ -301,7 +299,7 @@
 | 项 | 说明 |
 |---|---|
 | safeStorage 不可用 | Windows 上极少见；默认 fail-closed 拒绝明文写入；用户显式开启明文降级后，DB 标记 `plaintextMode` 且 UI 常驻警告；safeStorage 不可用时开关不可关，需恢复后自动重加密才归零 |
-| 深度检测消耗 token | 默认仅在新增/编辑/手动触发时深检（全局开关开 + 记录 `deepCheck=true` + ping=valid 才执行，否则只 ping）；50 个 Key 若开启轮询深检约 4800 次/天，成本不可忽略；用户可全局关闭或保持轮询深检关闭 |
+| 深度检测消耗 token | 默认轮询只 ping，仅在新增/编辑/手动触发时深检；开启"轮询深检"后轮询也深检（记录 `deepCheck=true` + ping=valid 才执行）；50 个 Key 若开启轮询深检约 4800 次/天，成本不可忽略；用户可关闭该开关保持轮询仅 ping |
 | 深检语义 | 深检只在 ping=valid 后执行；400/404（模型/配置问题）不降级 valid，仅写 lastError；401/403/402/429 按错误码改状态；模型/配置问题与 key 问题分开展示 |
 | provider API 变更 | 测试模型和端点可能变更（如 `gpt-4o-mini` 下线）；`testModel` 所有 provider 可配；`anthropic-version` 为代码内常量（非用户配置），随 HiKey 版本升级跟进；错误码映射表集中维护；内置名单为 MVP 首版暂定，M3 真实 Key 联调后定稿 |
 | lowdb 数据量上限 | 当前定位几十~几百条够用；v2 做用量历史时迁 SQLite |
@@ -314,7 +312,7 @@
 | 场景 | 预期 |
 |---|---|
 | 有效 Key（深检开） | 保存后 ping+深检通过 -> valid，检测模式标"深检" |
-| 有效 Key（深检关） | 全局 deepCheckEnabled=false 或记录 deepCheck=false 时，仅 ping 通过 -> valid，检测模式标"仅 ping"，不追加深检 |
+| 有效 Key（深检关） | 轮询时 deepCheckEnabled=false 或记录 deepCheck=false 时，仅 ping 通过 -> valid，检测模式标"仅 ping"，不追加深检（手动/新增/编辑不受限） |
 | 失效 Key | 401/403 且错误码非欠费类 -> invalid |
 | 限流 Key | 429 且错误码非欠费类（含无 body） -> rate_limited |
 | 欠费 Key | 402（含无 body），或 401/403/429 错误体命中欠费类（含 Anthropic 403 `billing_not_active`） -> quota_exceeded |
@@ -325,7 +323,7 @@
 | checking 状态 | 检测进行中 status=checking，显示蓝色徽标；完成或超时后写入最终状态 |
 | 启动归位 | 启动时遗留 checking 归位为 unchecked，不卡在检测中 |
 | 手动重检 | 全部重检取消当前轮所有未完成检测；单条立即检测仅取消该 key 在飞检测；按钮显示"重检中" |
-| 深检前置 | 全局 deepCheckEnabled + 记录 deepCheck + ping=valid 同时满足才深检；状态迁移不反向触发深检；轮询深检为可选开关 |
+| 深检前置 | 新增/编辑/手动始终深检；轮询需 deepCheckEnabled + 记录 deepCheck + ping=valid 同时满足才深检；状态迁移不反向触发深检 |
 | baseUrl 规范 | 非 custom：用户填带版本后缀时自动剥离后追加 `/v1`，不出现 `/v1/v1`；custom：原样拼接不追加版本段，用户自负责填对路径 |
 | 明文降级 | 默认拒绝；开启后 DB 写入 `plaintextMode: true` 且 UI 常驻警告；safeStorage 不可用时开关可开不可关（置灰），需恢复并重加密完成才可关 |
 | 明文降级-旧记录 | safeStorage 不可用时，已加密旧记录无法解密 -> status 标 unknown、lastError 写"无法解密旧记录"、界面报错不崩溃、可删除或重录 |
