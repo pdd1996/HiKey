@@ -1,10 +1,9 @@
-// 单 key 检测编排（PRD FR-2 + 数据库设计 §6.1）
+// 单 key 检测编排（M8.2 改造：状态改为 HTTP 码直存）
 //
 // 纯逻辑：fetch 实现与时间戳均由参数注入，可在 vitest 完全控制状态流转。
-// status=checking 由调度器在调用 checkKey 前写库；本函数只计算最终结果，
-// 由调度器落库。本函数不碰 db、不碰 Date.now。
+// 本函数只计算最终结果，由调度器落库。不碰 db、不碰 Date.now。
 
-import type { KeyRecord, Meta, KeyStatus, CheckMode } from '../storage/schema'
+import type { KeyRecord, Meta, CheckMode } from '../storage/schema'
 import { revealSecret } from '../crypto'
 import { buildPingUrl, buildDeepUrl } from './urls'
 import { buildHeaders, buildDeepBody } from './headers'
@@ -17,7 +16,7 @@ export type FetchImpl = typeof globalThis.fetch
 export type CheckModeArg = 'ping' | 'deep'
 
 export interface CheckOutcome {
-  status: KeyStatus
+  status: string
   lastChecked: number
   lastCheckMode: CheckMode
   lastDeepCheckedAt?: number
@@ -88,11 +87,11 @@ export async function checkKey(
   signal?: AbortSignal,
   clock?: () => number
 ): Promise<CheckOutcome> {
-  // 1. 解密 secret；失败 → unknown，不发网络（PRD FR-1 旧密文读取）
+  // 1. 解密 secret；失败 → 500（本地问题），不发网络
   const revealed = revealSecret(record.encSecret, record.secretMode)
   if (!revealed.ok) {
     return {
-      status: 'unknown',
+      status: '500',
       lastChecked: now,
       lastCheckMode: 'ping',
       lastError: '无法解密旧记录'
@@ -111,10 +110,10 @@ export async function checkKey(
   )
   const pingMs = clock && pingRes.ok ? Math.max(0, clock() - (t0 ?? 0)) : undefined
   if (!pingRes.ok) {
-    return { status: 'unknown', lastChecked: now, lastCheckMode: 'ping', pingMs }
+    return { status: pingRes.kind === 'timeout' ? 'timeout' : 'network_error', lastChecked: now, lastCheckMode: 'ping', pingMs }
   }
   const ping = classifyPing(pingRes.status, pingRes.body)
-  if (ping.status !== 'valid') {
+  if (ping.status !== '200') {
     return {
       status: ping.status,
       lastChecked: now,
@@ -124,13 +123,13 @@ export async function checkKey(
     }
   }
 
-  // 3. 深检前置：mode='ping' 直接返回；mode='deep' 仅看 testModel（开关由 scheduler 在选 poll mode 时管）
+  // 3. 深检前置：mode='ping' 直接返回；mode='deep' 仅看 testModel
   if (mode === 'ping') {
-    return { status: 'valid', lastChecked: now, lastCheckMode: 'ping', pingMs }
+    return { status: '200', lastChecked: now, lastCheckMode: 'ping', pingMs }
   }
   if (!record.testModel) {
     return {
-      status: 'valid',
+      status: '200',
       lastChecked: now,
       lastCheckMode: 'ping',
       lastError: '深检需要 testModel',
@@ -151,8 +150,8 @@ export async function checkKey(
     signal
   )
   if (!deepRes.ok) {
-    // 深检超时/网络异常 → unknown；记录深检已尝试
-    return { status: 'unknown', lastChecked: now, lastCheckMode: 'deep', lastDeepCheckedAt: now, pingMs }
+    // 深检超时/网络异常；记录深检已尝试
+    return { status: deepRes.kind === 'timeout' ? 'timeout' : 'network_error', lastChecked: now, lastCheckMode: 'deep', lastDeepCheckedAt: now, pingMs }
   }
   const deep = classifyDeep(deepRes.status, deepRes.body)
   return {
