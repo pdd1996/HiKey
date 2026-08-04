@@ -31,7 +31,7 @@ function legacyRoot(): DbRoot {
 }
 
 describe('migrate', () => {
-  it('schemaVersion 0 + gemini + checking → 迁移为 custom、删除 status、版本升到 3', () => {
+  it('schemaVersion 0 + gemini + checking → 迁移为 custom、删除 status、版本升到 4', () => {
     const root = legacyRoot()
     const { changed } = migrate(root)
     expect(changed).toBe(true)
@@ -71,5 +71,41 @@ describe('migrate', () => {
     }
     expect(migrate(root).changed).toBe(false)
     expect(root.keys[0].status).toBe('200')
+  })
+
+  describe('v3→v4 合并 deepCheck 开关', () => {
+    function v3Root(metaOver: Record<string, unknown>): DbRoot {
+      return {
+        schemaVersion: 3 as DbRoot['schemaVersion'],
+        keys: [],
+        meta: {
+          checkIntervalMinutes: 15,
+          deepCheckEnabled: true,
+          deepCheckOnEveryPoll: false,
+          concurrentChecks: 4,
+          pingTimeoutMs: 2000,
+          deepTimeoutMs: 2000,
+          allowPlaintextFallback: false,
+          plaintextMode: false,
+          clipboardClearMs: 60000,
+          ...metaOver
+        }
+      } as unknown as DbRoot
+    }
+
+    it('deepCheckEnabled=true + deepCheckOnEveryPoll=true → 合并为 true，删除 deepCheckOnEveryPoll', () => {
+      const root = v3Root({ deepCheckOnEveryPoll: true })
+      migrate(root)
+      expect(root.schemaVersion).toBe(SCHEMA_VERSION)
+      expect(root.meta.deepCheckEnabled).toBe(true)
+      expect('deepCheckOnEveryPoll' in root.meta).toBe(false)
+    })
+
+    it('deepCheckOnEveryPoll=false → 合并为 false，删除 deepCheckOnEveryPoll', () => {
+      const root = v3Root({ deepCheckEnabled: true, deepCheckOnEveryPoll: false })
+      migrate(root)
+      expect(root.meta.deepCheckEnabled).toBe(false)
+      expect('deepCheckOnEveryPoll' in root.meta).toBe(false)
+    })
   })
 })

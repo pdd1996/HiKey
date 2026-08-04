@@ -2,7 +2,7 @@
 // 字段缺失视为 schemaVersion 0（§5），由 migrate.ts 归一到当前版本。
 
 /** 当前 schema 版本号。低于此值触发迁移。 */
-export const SCHEMA_VERSION = 3
+export const SCHEMA_VERSION = 4
 
 // KNOWN_PROVIDERS / Provider 已抽到 shared/providers.ts（跨进程共享单一来源）。
 // 此处 re-export 保持现有 `from '../storage/schema'` 引用不变。
@@ -48,7 +48,6 @@ export interface KeyRecord {
 export interface Meta {
   checkIntervalMinutes: number
   deepCheckEnabled: boolean
-  deepCheckOnEveryPoll: boolean
   concurrentChecks: number
   pingTimeoutMs: number
   deepTimeoutMs: number
@@ -59,7 +58,7 @@ export interface Meta {
 
 /** DB 根对象（§2） */
 export interface DbRoot {
-  schemaVersion: 3
+  schemaVersion: 4
   keys: KeyRecord[]
   meta: Meta
 }
@@ -67,8 +66,7 @@ export interface DbRoot {
 /** §4 默认值 */
 export const DEFAULT_META: Meta = {
   checkIntervalMinutes: 15,
-  deepCheckEnabled: true,
-  deepCheckOnEveryPoll: false,
+  deepCheckEnabled: false,
   concurrentChecks: 4,
   pingTimeoutMs: 2000,
   deepTimeoutMs: 2000,
