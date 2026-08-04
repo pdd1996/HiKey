@@ -56,7 +56,7 @@ export function encryptForStore(
  * safeStorage 密文 → 调解密；plaintext → 直取。
  *
  * 返回判别联合（PRD FR-1 + M2 遗留契约）：密文损坏或 safeStorage 不可用时
- * 返回 { ok:false, reason:'undecryptable' }，由调用方据此写 status:'unknown' +
+ * 返回 { ok:false, reason:'undecryptable' }，由调用方据此写 status:'500' +
  * lastError，不抛原始异常、不把错误透传渲染进程。
  */
 export type RevealResult =

@@ -51,7 +51,7 @@ describe('buildBackup', () => {
     expect(b.plaintextBackup).toBe(false)
     expect(typeof b.verifier).toBe('string')
     expect(b.verifier).not.toBe('')
-    expect(b.schemaVersion).toBe(2)
+    expect(b.schemaVersion).toBe(3)
     expect(b.plaintextRecordCount).toBe(0)
   })
 

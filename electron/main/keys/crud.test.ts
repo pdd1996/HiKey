@@ -42,7 +42,7 @@ function key(over: Partial<KeyRecord> = {}): KeyRecord {
     baseUrl: 'https://api.openai.com',
     encSecret: encFor('sk-old'),
     secretMode: 'safeStorage' as SecretMode,
-    status: 'valid',
+    status: '200',
     lastChecked: 100,
     lastCheckMode: 'deep',
     lastDeepCheckedAt: 100,
@@ -61,7 +61,7 @@ beforeEach(() => {
 })
 
 describe('addKey', () => {
-  it('safeStorage 可用 → safeStorage 模式 + status=unchecked + testModel 取默认', () => {
+  it('safeStorage 可用 → safeStorage 模式 + status 未定义 + testModel 取默认', () => {
     const root = defaultDbRoot()
     const out = addKey(root, input({ testModel: undefined }), 1000)
     expect(out.ok).toBe(true)
@@ -69,7 +69,7 @@ describe('addKey', () => {
     const rec = root.keys[0]
     expect(rec.secretMode).toBe('safeStorage')
     expect(rec.encSecret).toBe(encFor('sk-x'))
-    expect(rec.status).toBe('unchecked')
+    expect(rec.status).toBeUndefined()
     expect(rec.testModel).toBe('gpt-4o-mini')
     expect(rec.createdAt).toBe(1000)
     expect(rec.deepCheck).toBe(true)
@@ -122,25 +122,25 @@ describe('addKey', () => {
 describe('updateKey', () => {
   it('元数据更新保留 secret + status', () => {
     const root = defaultDbRoot()
-    root.keys = [key({ id: 'k1', status: 'valid', encSecret: encFor('sk-old'), lastChecked: 100 })]
+    root.keys = [key({ id: 'k1', status: '200', encSecret: encFor('sk-old'), lastChecked: 100 })]
     const out = updateKey(root, 'k1', input({ name: 'new-name', secret: undefined }), 2000)
     expect(out.ok).toBe(true)
     const rec = root.keys[0]
     expect(rec.name).toBe('new-name')
     expect(rec.encSecret).toBe(encFor('sk-old')) // 保留
-    expect(rec.status).toBe('valid') // 保留
+    expect(rec.status).toBe('200') // 保留
     expect(rec.lastChecked).toBe(100) // 保留
     expect(rec.updatedAt).toBe(2000)
   })
 
-  it('传新 secret → 重加密 + 重置 status=unchecked + 清 lastChecked 等', () => {
+  it('传新 secret → 重加密 + 重置 status 为 undefined + 清 lastChecked 等', () => {
     const root = defaultDbRoot()
-    root.keys = [key({ id: 'k1', status: 'valid', lastChecked: 100, lastCheckMode: 'deep', lastDeepCheckedAt: 100, lastError: 'E' })]
+    root.keys = [key({ id: 'k1', status: '200', lastChecked: 100, lastCheckMode: 'deep', lastDeepCheckedAt: 100, lastError: 'E' })]
     const out = updateKey(root, 'k1', input({ secret: 'sk-new' }), 2000)
     expect(out.ok).toBe(true)
     const rec = root.keys[0]
     expect(rec.encSecret).toBe(encFor('sk-new'))
-    expect(rec.status).toBe('unchecked')
+    expect(rec.status).toBeUndefined()
     expect(rec.lastChecked).toBeUndefined()
     expect(rec.lastCheckMode).toBeUndefined()
     expect(rec.lastDeepCheckedAt).toBeUndefined()
@@ -158,14 +158,14 @@ describe('updateKey', () => {
   it('传新 secret 但 safeStorage 不可用且未降级 → fail-closed，完全不改库', () => {
     mockSafeStorage._setAvailable(false)
     const root = defaultDbRoot()
-    root.keys = [key({ id: 'k1', name: 'orig', encSecret: encFor('sk-old'), status: 'valid' })]
+    root.keys = [key({ id: 'k1', name: 'orig', encSecret: encFor('sk-old'), status: '200' })]
     const out = updateKey(root, 'k1', input({ name: 'new-name', secret: 'sk-new' }), 2000)
     expect(out.ok).toBe(false)
     expect(out.reason).toBe('fail-closed')
     // fail-closed 在改动前拒绝：secret 和元数据都保持原样
     expect(root.keys[0].encSecret).toBe(encFor('sk-old'))
     expect(root.keys[0].name).toBe('orig')
-    expect(root.keys[0].status).toBe('valid')
+    expect(root.keys[0].status).toBe('200')
   })
 
   it('元数据改 provider 为 custom 但缺 testModel → invalid-input', () => {

@@ -45,7 +45,7 @@ function seedRec(over: Partial<KeyRecord> = {}): KeyRecord {
     baseUrl: 'https://api.openai.com',
     encSecret: encFor('sk-old'),
     secretMode: 'safeStorage' as SecretMode,
-    status: 'valid',
+    status: '200',
     deepCheck: true,
     testModel: 'gpt-4o-mini',
     lastChecked: 1,
@@ -84,7 +84,7 @@ describe('applyImport — add / force-add', () => {
     expect(rec.baseUrl).toBe('https://api.openai.com')
     expect(rec.encSecret).toBe(encFor('sk-abcdef1234567890'))
     expect(rec.secretMode).toBe('safeStorage')
-    expect(rec.status).toBe('unchecked')
+    expect(rec.status).toBeUndefined()
     expect(rec.deepCheck).toBe(true)
     expect(rec.testModel).toBe('gpt-4o-mini')
     expect(rec.notes).toBe('')
@@ -132,7 +132,7 @@ describe('applyImport — overwrite', () => {
     expect(rec.id).toBe(existing.id)
     expect(rec.createdAt).toBe(1)
     // 状态重置
-    expect(rec.status).toBe('unchecked')
+    expect(rec.status).toBeUndefined()
     expect(rec.lastChecked).toBeUndefined()
     expect(rec.lastCheckMode).toBeUndefined()
     expect(rec.lastError).toBeUndefined()

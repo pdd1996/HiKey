@@ -2,54 +2,54 @@ import { describe, it, expect } from 'vitest'
 import { classifyPing, classifyDeep } from './classify'
 
 describe('classifyPing', () => {
-  it('200 → valid，无 lastError', () => {
-    expect(classifyPing(200, null)).toEqual({ status: 'valid' })
+  it('200 → 200，无 lastError', () => {
+    expect(classifyPing(200, null)).toEqual({ status: '200' })
   })
 
-  it('401 非欠费 → invalid', () => {
+  it('401 → 401', () => {
     const r = classifyPing(401, { error: { code: 'invalid_api_key' } })
-    expect(r.status).toBe('invalid')
+    expect(r.status).toBe('401')
     expect(r.lastError).toBe('401 / invalid_api_key')
   })
 
-  it('403 命中欠费 → quota_exceeded（Anthropic billing_not_active 走 403）', () => {
+  it('403 命中欠费（Anthropic billing_not_active 走 403） → 403', () => {
     const r = classifyPing(403, { error: { type: 'billing_not_active' } })
-    expect(r.status).toBe('quota_exceeded')
+    expect(r.status).toBe('403')
     expect(r.lastError).toBe('403 / billing_not_active')
   })
 
-  it('403 非欠费 → invalid', () => {
+  it('403 非欠费 → 403', () => {
     const r = classifyPing(403, { error: { code: 'forbidden' } })
-    expect(r.status).toBe('invalid')
+    expect(r.status).toBe('403')
   })
 
-  it('402 含无 body → quota_exceeded', () => {
+  it('402 含无 body → 402', () => {
     const r = classifyPing(402, null)
-    expect(r.status).toBe('quota_exceeded')
+    expect(r.status).toBe('402')
     expect(r.lastError).toBe('402')
   })
 
-  it('429 命中欠费 → quota_exceeded', () => {
+  it('429 命中欠费 → 429', () => {
     const r = classifyPing(429, { error: { code: 'insufficient_quota' } })
-    expect(r.status).toBe('quota_exceeded')
+    expect(r.status).toBe('429')
   })
 
-  it('429 无欠费码（含无 body） → rate_limited', () => {
-    expect(classifyPing(429, null).status).toBe('rate_limited')
+  it('429 无欠费码（含无 body） → 429', () => {
+    expect(classifyPing(429, null).status).toBe('429')
     expect(classifyPing(429, { error: { type: 'rate_limit_exceeded' } }).status).toBe(
-      'rate_limited'
+      '429'
     )
   })
 
-  it('5xx → unknown', () => {
-    expect(classifyPing(500, null).status).toBe('unknown')
-    expect(classifyPing(503, null).status).toBe('unknown')
+  it('5xx → 对应状态码', () => {
+    expect(classifyPing(500, null).status).toBe('500')
+    expect(classifyPing(503, null).status).toBe('503')
   })
 
-  it('其余 4xx → unknown（不误判失效）', () => {
-    expect(classifyPing(404, null).status).toBe('unknown')
-    expect(classifyPing(422, null).status).toBe('unknown')
-    expect(classifyPing(405, null).status).toBe('unknown')
+  it('其余 4xx → 对应状态码', () => {
+    expect(classifyPing(404, null).status).toBe('404')
+    expect(classifyPing(422, null).status).toBe('422')
+    expect(classifyPing(405, null).status).toBe('405')
   })
 
   it('lastError 脱敏：只含状态码 + code，无 URL/key', () => {
@@ -60,51 +60,51 @@ describe('classifyPing', () => {
 })
 
 describe('classifyDeep', () => {
-  it('2xx → valid', () => {
-    expect(classifyDeep(200, null)).toEqual({ status: 'valid', deepDone: true })
+  it('2xx → 200', () => {
+    expect(classifyDeep(200, null)).toEqual({ status: '200', deepDone: true })
   })
 
-  it('400 → 状态保持 valid，lastError 写模型/配置提示', () => {
+  it('400 → 400 + lastError', () => {
     const r = classifyDeep(400, { error: { code: 'model_not_found' } })
-    expect(r.status).toBe('valid')
+    expect(r.status).toBe('400')
     expect(r.deepDone).toBe(true)
-    expect(r.lastError).toBe('深检未通过：模型/配置问题，建议更换 testModel')
+    expect(r.lastError).toBe('400 / model_not_found')
   })
 
-  it('404 → 同 400，不降级 valid', () => {
+  it('404 → 404 + lastError', () => {
     const r = classifyDeep(404, null)
-    expect(r.status).toBe('valid')
-    expect(r.lastError).toBe('深检未通过：模型/配置问题，建议更换 testModel')
+    expect(r.status).toBe('404')
+    expect(r.lastError).toBe('404')
   })
 
-  it('401 非欠费 → invalid', () => {
-    expect(classifyDeep(401, { error: { code: 'invalid_api_key' } }).status).toBe('invalid')
+  it('401 → 401', () => {
+    expect(classifyDeep(401, { error: { code: 'invalid_api_key' } }).status).toBe('401')
   })
 
-  it('403 命中欠费 → quota_exceeded', () => {
+  it('403 命中欠费 → 403', () => {
     expect(
       classifyDeep(403, { error: { type: 'billing_not_active' } }).status
-    ).toBe('quota_exceeded')
+    ).toBe('403')
   })
 
-  it('402 → quota_exceeded', () => {
-    expect(classifyDeep(402, null).status).toBe('quota_exceeded')
+  it('402 → 402', () => {
+    expect(classifyDeep(402, null).status).toBe('402')
   })
 
-  it('429 命中欠费 → quota_exceeded；否则 rate_limited', () => {
+  it('429 命中欠费 → 429；否则 429', () => {
     expect(
       classifyDeep(429, { error: { code: 'insufficient_quota' } }).status
-    ).toBe('quota_exceeded')
-    expect(classifyDeep(429, null).status).toBe('rate_limited')
+    ).toBe('429')
+    expect(classifyDeep(429, null).status).toBe('429')
   })
 
-  it('5xx → unknown', () => {
-    expect(classifyDeep(500, null).status).toBe('unknown')
+  it('5xx → 对应状态码', () => {
+    expect(classifyDeep(500, null).status).toBe('500')
   })
 
-  it('其余 4xx → unknown', () => {
-    expect(classifyDeep(422, null).status).toBe('unknown')
-    expect(classifyDeep(405, null).status).toBe('unknown')
+  it('其余 4xx → 对应状态码', () => {
+    expect(classifyDeep(422, null).status).toBe('422')
+    expect(classifyDeep(405, null).status).toBe('405')
   })
 
   it('deepDone 始终为 true', () => {
