@@ -62,14 +62,14 @@ export function SettingsView() {
         </div>
 
         <ToggleRow
-          label="深度检测"
-          desc="检测时附加一次模型调用以验证 key 可用性。"
+          label="轮询深度检测"
+          desc="轮询时附加一次模型调用以验证 key 可用性（仅影响轮询；行内「深检」不受此限）。"
           checked={meta.deepCheckEnabled}
           onCheckedChange={(v) => void applySettings({ deepCheckEnabled: v })}
         />
         <ToggleRow
           label="轮询深检"
-          desc="每次轮询都执行深检（关闭则仅手动重检时深检）。"
+          desc="每次轮询都执行深检（关闭则轮询仅 Ping；行内「深检」始终可手动触发）。"
           checked={meta.deepCheckOnEveryPoll}
           onCheckedChange={(v) => void applySettings({ deepCheckOnEveryPoll: v })}
         />
@@ -79,11 +79,11 @@ export function SettingsView() {
             variant="outline"
             size="sm"
             onClick={() => {
-              void checkAll()
-              toast.info('已触发全部重检')
+              void checkAll('ping')
+              toast.info('已触发全部 Ping')
             }}
           >
-            <RefreshCw className="mr-2 h-4 w-4" /> 立即重检
+            <RefreshCw className="mr-2 h-4 w-4" /> 立即 Ping
           </Button>
         </div>
       </section>

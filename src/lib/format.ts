@@ -31,3 +31,9 @@ export function formatCheckMode(mode: CheckMode | undefined): string {
   if (mode === 'deep') return '深检'
   return '—'
 }
+
+/** ping 延迟：undefined/NaN → '—'，否则 `${ms}ms`。 */
+export function formatPingMs(ms: number | undefined): string {
+  if (ms === undefined || !Number.isFinite(ms)) return '—'
+  return `${Math.round(ms)}ms`
+}

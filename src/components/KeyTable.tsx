@@ -8,7 +8,7 @@ interface KeyTableProps {
   onReveal: (k: SafeKeyView) => void
   onEdit: (k: SafeKeyView) => void
   onRemove: (k: SafeKeyView) => void
-  onCheckNow: (id: string) => void
+  onCheckNow: (id: string, mode: 'ping' | 'deep') => void
 }
 
 export function KeyTable({ keys, loading, onReveal, onEdit, onRemove, onCheckNow }: KeyTableProps) {
@@ -31,6 +31,7 @@ export function KeyTable({ keys, loading, onReveal, onEdit, onRemove, onCheckNow
           <TableHead>状态</TableHead>
           <TableHead>最后检测</TableHead>
           <TableHead>检测模式</TableHead>
+          <TableHead>延迟</TableHead>
           <TableHead className="text-right">操作</TableHead>
         </TableRow>
       </TableHeader>
