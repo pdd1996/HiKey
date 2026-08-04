@@ -101,7 +101,7 @@ describe('keys CRUD 接线', () => {
     expect(out.ok).toBe(true)
     if (out.ok) expect(out.id).toBeTruthy()
     expect(deps.db.write).toHaveBeenCalledTimes(1)
-    expect(deps.scheduler.checkNow).toHaveBeenCalledWith(out.id)
+    expect(deps.scheduler.checkNow).toHaveBeenCalledWith(out.id, 'ping')
   })
 
   it('add 失败（fail-closed，safeStorage 不可用 + 未开降级）→ 不写库不检测', async () => {
@@ -121,7 +121,7 @@ describe('keys CRUD 接线', () => {
     const out = await handleUpdate(deps, k.id, { provider: 'openai', name: 'n2', baseUrl: 'https://api.openai.com' })
     expect(out.ok).toBe(true)
     expect(deps.db.write).toHaveBeenCalledTimes(1)
-    expect(deps.scheduler.checkNow).toHaveBeenCalledWith(k.id)
+    expect(deps.scheduler.checkNow).toHaveBeenCalledWith(k.id, 'ping')
   })
 
   it('update not-found → 不写库不检测', async () => {

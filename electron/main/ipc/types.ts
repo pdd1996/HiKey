@@ -15,6 +15,7 @@ import type { ImportSession, ConfirmItem, PreviewRow } from '../import/types'
 import type { ApplyResult } from '../import/apply'
 import type { KeyInput, SafeKeyView, AddOutcome, UpdateOutcome, RemoveOutcome, RevealOutcome } from '../keys/types'
 import type { RestoreRejectReason } from '../backup/types'
+import type { CheckModeArg } from '../healthCheck/checker'
 
 /** re-export 供 preload/renderer 复用（status:update 载荷类型）。 */
 export type { SafeKeyView } from '../keys/types'
@@ -25,8 +26,8 @@ export type { SafeKeyView } from '../keys/types'
  * 结构上不兼容普通对象）。
  */
 export interface SchedulerLike {
-  checkNow(id: string): void
-  checkAll(): void
+  checkNow(id: string, mode?: CheckModeArg): void
+  checkAll(mode?: CheckModeArg): void
   reschedule(): void
   start(): void
   stop(): void
@@ -145,8 +146,8 @@ export interface HikeyApi {
     update(id: string, input: KeyInput): Promise<UpdateOutcome>
     remove(id: string): Promise<RemoveOutcome>
     reveal(id: string): Promise<RevealOutcome>
-    checkNow(id: string): Promise<void>
-    checkAll(): Promise<void>
+    checkNow(id: string, mode?: CheckModeArg): Promise<void>
+    checkAll(mode?: CheckModeArg): Promise<void>
   }
   import: {
     pickAndParse(): Promise<PickAndParseResult>

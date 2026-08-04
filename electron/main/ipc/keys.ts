@@ -16,6 +16,7 @@ import type { IpcDeps } from './types'
 import type { KeyInput, AddOutcome, UpdateOutcome, RemoveOutcome, RevealOutcome } from '../keys/types'
 import type { KeyRecord } from '../storage/schema'
 import type { SafeKeyView } from '../keys/types'
+import type { CheckModeArg } from '../healthCheck/checker'
 
 /** 单条记录剥 encSecret 后的安全视图（status:update 载荷用，避免明文密文下发渲染进程）。 */
 export function toSafeView(record: KeyRecord): SafeKeyView {
@@ -31,8 +32,8 @@ export async function handleAdd(deps: IpcDeps, input: KeyInput): Promise<AddOutc
   const out = addKey(deps.db.data, input, deps.now())
   if (!out.ok || !out.id) return out
   await deps.db.write()
-  // 保存即检测（PRD 场景 C）。checkNow 异步发起，不阻塞返回。
-  deps.scheduler.checkNow(out.id)
+  // 保存即检测（PRD 场景 C）。录入态只 ping（轻），深检留给运营态手动触发。
+  deps.scheduler.checkNow(out.id, 'ping')
   return out
 }
 
@@ -40,7 +41,7 @@ export async function handleUpdate(deps: IpcDeps, id: string, input: KeyInput): 
   const out = updateKey(deps.db.data, id, input, deps.now())
   if (!out.ok) return out
   await deps.db.write()
-  deps.scheduler.checkNow(id)
+  deps.scheduler.checkNow(id, 'ping')
   return out
 }
 
@@ -70,10 +71,10 @@ export function handleReveal(deps: IpcDeps, id: string): RevealOutcome {
   return out
 }
 
-export function handleCheckNow(deps: IpcDeps, id: string): void {
-  deps.scheduler.checkNow(id)
+export function handleCheckNow(deps: IpcDeps, id: string, mode: CheckModeArg = 'ping'): void {
+  deps.scheduler.checkNow(id, mode)
 }
 
-export function handleCheckAll(deps: IpcDeps): void {
-  deps.scheduler.checkAll()
+export function handleCheckAll(deps: IpcDeps, mode: CheckModeArg = 'ping'): void {
+  deps.scheduler.checkAll(mode)
 }
