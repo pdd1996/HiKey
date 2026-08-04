@@ -24,7 +24,7 @@ const NOW = 1_700_000_000_000
  */
 function makeDb(keys: KeyRecord[] = [], metaOver: Partial<typeof DEFAULT_META> = {}): Low<DbRoot> {
   const data: DbRoot = {
-    schemaVersion: 2,
+    schemaVersion: 2 as DbRoot['schemaVersion'],
     keys,
     meta: { ...DEFAULT_META, ...metaOver }
   }
@@ -111,8 +111,8 @@ describe('Scheduler', () => {
     expect(db.data.keys.every((k) => k.lastCheckMode === 'ping')).toBe(true)
   })
 
-  it('poll 深检门控：deepCheckOnEveryPoll=true → 每Key 2次fetch(ping+deep)；=false → 1次', async () => {
-    const dbYes = makeDb([key()], { deepCheckEnabled: true, deepCheckOnEveryPoll: true })
+  it('poll 深检门控：deepCheckEnabled=true → 每Key 2次fetch(ping+deep)；=false → 1次', async () => {
+    const dbYes = makeDb([key()], { deepCheckEnabled: true })
     const gateYes = makeGateFetch(200)
     const schedYes = new Scheduler(dbYes, gateYes.impl)
     schedYes.start()
@@ -120,7 +120,7 @@ describe('Scheduler', () => {
     expect(gateYes.calls.length).toBe(2) // ping + deep
     expect(dbYes.data.keys[0].lastCheckMode).toBe('deep')
 
-    const dbNo = makeDb([key()], { deepCheckEnabled: true, deepCheckOnEveryPoll: false })
+    const dbNo = makeDb([key()], { deepCheckEnabled: false })
     const gateNo = makeGateFetch(200)
     const schedNo = new Scheduler(dbNo, gateNo.impl)
     schedNo.start()
@@ -131,7 +131,7 @@ describe('Scheduler', () => {
 
   it('checkNow(mode=deep) 强制深检：bypass 开关', async () => {
     const a = key({ deepCheck: false })
-    const db = makeDb([a], { deepCheckEnabled: false, deepCheckOnEveryPoll: false })
+    const db = makeDb([a], { deepCheckEnabled: false })
     const gate = makeGateFetch(200)
     const sched = new Scheduler(db, gate.impl)
     sched.start()

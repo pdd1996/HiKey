@@ -201,7 +201,7 @@ export class Scheduler {
       // poll 触发：按开关决定是否深检；manual 触发：用调用方传入的 mode
       const effectiveMode: CheckModeArg =
         trigger === 'poll'
-          ? this.meta.deepCheckEnabled && record.deepCheck && this.meta.deepCheckOnEveryPoll
+          ? record.deepCheck && this.meta.deepCheckEnabled
             ? 'deep'
             : 'ping'
           : mode

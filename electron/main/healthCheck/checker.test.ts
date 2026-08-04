@@ -41,7 +41,6 @@ function meta(over: Partial<Meta> = {}): Meta {
   return {
     checkIntervalMinutes: 15,
     deepCheckEnabled: true,
-    deepCheckOnEveryPoll: false,
     concurrentChecks: 4,
     pingTimeoutMs: 2000,
     deepTimeoutMs: 2000,
@@ -93,12 +92,12 @@ describe('checkKey', () => {
     expect(f).toHaveBeenCalledTimes(1)
   })
 
-  it('mode=deep 强制深检：bypass deepCheckEnabled/deepCheck/deepCheckOnEveryPoll', async () => {
-    // 三个开关全关，mode=deep 仍跑深检
+  it('mode=deep 强制深检：bypass deepCheckEnabled/record.deepCheck', async () => {
+    // 两个开关全关，mode=deep 仍跑深检
     const f = fetchSeq({ status: 200 }, { status: 200 })
     const out = await checkKey(
       rec({ deepCheck: false }),
-      meta({ deepCheckEnabled: false, deepCheckOnEveryPoll: false }),
+      meta({ deepCheckEnabled: false }),
       'poll',
       f,
       NOW,
@@ -138,7 +137,7 @@ describe('checkKey', () => {
 
   it('manual + 默认 mode=deep → 深检（开关不挡手动）', async () => {
     const f = fetchSeq({ status: 200 }, { status: 200 })
-    const out = await checkKey(rec(), meta({ deepCheckOnEveryPoll: false }), 'manual', f, NOW)
+    const out = await checkKey(rec(), meta({ deepCheckEnabled: false }), 'manual', f, NOW)
     expect(out.lastCheckMode).toBe('deep')
   })
 

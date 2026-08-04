@@ -72,7 +72,7 @@ export async function fetchWithTimeout(
  * 单 key 检测全流程。
  * @param now   调用方注入的时间戳（避免依赖 Date.now）
  * @param mode   检测模式：'ping' 仅连通；'deep' ping 通过后跑深检（仅看 testModel，
- *               bypass deepCheckEnabled/deepCheck/deepCheckOnEveryPoll 三个开关——
+ *               bypass deepCheckEnabled/record.deepCheck 两个开关——
  *               那些开关只在 scheduler 选 poll 的 mode 时生效）
  * @param signal 调度器的 per-key 取消信号（可选）
  * @param clock  延迟计时注入（避免依赖 Date.now）；未注入则不记录 pingMs
