@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown, ChevronRight, Check, X, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
@@ -24,10 +24,11 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { useKeys } from '@/providers/KeysProvider'
 import { DEFAULT_BASE_URL, DEFAULT_TEST_MODEL, KNOWN_PROVIDERS } from '@shared/providers'
-import { providerLabel } from '@/lib/status'
+import { providerLabel, statusBadge } from '@/lib/status'
 import type { Provider } from '@shared/providers'
 import type { KeyInput } from '@main/keys/types'
 import type { SafeKeyView } from '@main/keys/types'
+import type { ProbeResult } from '@main/ipc/types'
 
 interface KeyFormDialogProps {
   open: boolean
@@ -62,8 +63,11 @@ const schema = z
 type FormValues = z.infer<typeof schema>
 
 export function KeyFormDialog({ open, onOpenChange, mode, editKey }: KeyFormDialogProps) {
-  const { addKey, updateKey } = useKeys()
+  const { addKey, updateKey, probe } = useKeys()
   const [advanced, setAdvanced] = useState(false)
+  const [testState, setTestState] = useState<{ phase: 'idle' | 'pending' | 'done'; result?: ProbeResult }>({
+    phase: 'idle'
+  })
   const isEdit = mode === 'edit'
 
   const form = useForm<FormValues>({
@@ -82,6 +86,7 @@ export function KeyFormDialog({ open, onOpenChange, mode, editKey }: KeyFormDial
   // 打开时按模式填充
   useEffect(() => {
     if (!open) return
+    setTestState({ phase: 'idle' })
     if (isEdit && editKey) {
       form.reset({
         provider: editKey.provider,
@@ -107,10 +112,49 @@ export function KeyFormDialog({ open, onOpenChange, mode, editKey }: KeyFormDial
 
   // provider 切换（仅用户主动切换时触发，不覆盖编辑初始值）
   const provider = form.watch('provider')
+  const secretValue = form.watch('secret')
+  // 编辑模式留空 secret = 不改 key，无明文无法测试 → 禁用测试按钮
+  const testDisabled = isEdit && secretValue.trim() === ''
   function handleProviderChange(v: Provider) {
     form.setValue('provider', v)
     form.setValue('baseUrl', defaultBaseUrl(v))
     form.setValue('testModel', defaultTestModel(v))
+  }
+
+  // 测试：用当前表单明文跑一次 ping，不入库。校验 baseUrl/secret 非空后调 probe。
+  // 注意：onClick 用 void handleTest()，没有 handleSubmit 的错误边界包裹，
+  // 必须自己 try/catch，否则 probe reject 会卡死 pending 状态 + unhandled rejection。
+  async function handleTest() {
+    const baseUrl = form.getValues('baseUrl').trim()
+    const secret = form.getValues('secret').trim()
+    if (!baseUrl) {
+      form.setError('baseUrl', { message: 'baseUrl 不能为空' })
+      return
+    }
+    if (!secret) {
+      form.setError('secret', { message: '先填 API Key 才能测试' })
+      return
+    }
+    setTestState({ phase: 'pending' })
+    try {
+      const result = await probe({ provider: form.getValues('provider'), baseUrl, secret })
+      setTestState({ phase: 'done', result })
+      if (result.ok && result.status === 'valid') {
+        toast.success('测试通过', { description: result.pingMs != null ? `有效 (${result.pingMs} ms)` : '有效' })
+      } else if (result.ok) {
+        toast.error(statusBadge(result.status).label, { description: result.lastError })
+      } else if (result.reason === 'timeout') {
+        toast.error('请求超时', {
+          description: result.pingMs != null ? `${result.pingMs} ms` : undefined,
+        })
+      } else {
+        toast.error('网络错误')
+      }
+    } catch (err) {
+      // IPC 异常或主进程抛错：复位 pending，避免按钮卡死
+      setTestState({ phase: 'idle' })
+      toast.error('测试失败', { description: err instanceof Error ? err.message : '未知错误' })
+    }
   }
 
   async function onSubmit(values: FormValues) {
@@ -226,7 +270,24 @@ export function KeyFormDialog({ open, onOpenChange, mode, editKey }: KeyFormDial
             </div>
           )}
 
+          {/* 测试结果内嵌条 */}
+          {testState.phase !== 'idle' && (
+            <TestResultBar phase={testState.phase} result={testState.result} />
+          )}
+          {testDisabled && testState.phase !== 'pending' && (
+            <p className="text-xs text-muted-foreground">先填 API Key 才能测试</p>
+          )}
+
           <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              className="mr-auto"
+              disabled={form.formState.isSubmitting || testState.phase === 'pending' || testDisabled}
+              onClick={() => void handleTest()}
+            >
+              {testState.phase === 'pending' ? '测试中…' : '测试'}
+            </Button>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               取消
             </Button>
@@ -237,5 +298,60 @@ export function KeyFormDialog({ open, onOpenChange, mode, editKey }: KeyFormDial
         </form>
       </DialogContent>
     </Dialog>
+  )
+}
+
+/**
+ * 测试结果内嵌条：按 KeyStatus 配色 + 文案（复用 statusBadge 保持与列表徽标一致）。
+ * valid 绿 / invalid 红 / quota_exceeded 橙 / rate_limited 黄 / unknown·失败 灰。
+ */
+function TestResultBar({
+  phase,
+  result
+}: {
+  phase: 'idle' | 'pending' | 'done'
+  result?: ProbeResult
+}) {
+  if (phase === 'pending') {
+    return (
+      <div className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-gray-100 px-3 py-1.5 text-sm text-gray-600">
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        测试中…
+      </div>
+    )
+  }
+  if (!result) return null
+
+  if (result.ok) {
+    const badge = statusBadge(result.status)
+    const ms = result.pingMs != null ? ` (${result.pingMs} ms)` : ''
+    const icon =
+      result.status === 'valid' ? (
+        <Check className="h-3.5 w-3.5" />
+      ) : (
+        <X className="h-3.5 w-3.5" />
+      )
+    const label =
+      result.status === 'valid'
+        ? `有效${ms}`
+        : result.status === 'invalid'
+          ? '认证失败'
+          : badge.label
+    return (
+      <div className={`inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm ${badge.className}`}>
+        {icon}
+        <span>{label}</span>
+        {result.lastError && <span className="opacity-70">· {result.lastError}</span>}
+      </div>
+    )
+  }
+
+  // ok:false → 网络错误 / 请求超时（灰）
+  const ms = result.pingMs != null ? ` (${result.pingMs} ms)` : ''
+  return (
+    <div className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-gray-100 px-3 py-1.5 text-sm text-gray-600">
+      <X className="h-3.5 w-3.5" />
+      {result.reason === 'timeout' ? `请求超时${ms}` : '网络错误'}
+    </div>
   )
 }

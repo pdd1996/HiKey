@@ -2,7 +2,7 @@
 // 复用 scheduler.test 的 safeStorage 可逆 mock。
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { handleReveal, handleAdd, handleUpdate, handleList, handleRemove, toSafeView } from './keys'
+import { handleReveal, handleAdd, handleUpdate, handleList, handleRemove, toSafeView, handleProbe } from './keys'
 import { makeDb, makeKey, makeDeps } from './testutil'
 import type { IpcDeps } from './types'
 
@@ -14,6 +14,11 @@ const { mockSafeStorage } = vi.hoisted(() => ({
   }
 }))
 vi.mock('electron', () => ({ safeStorage: mockSafeStorage }))
+
+// mock probe 模块：handleProbe 透传参数，结果直接由 mock 决定。
+const { probeKeyMock } = vi.hoisted(() => ({ probeKeyMock: vi.fn() }))
+vi.mock('../healthCheck/probe', () => ({ probeKey: probeKeyMock }))
+import { probeKey } from '../healthCheck/probe'
 
 describe('handleReveal 剪贴板接线', () => {
   beforeEach(() => vi.useFakeTimers())
@@ -157,5 +162,35 @@ describe('keys CRUD 接线', () => {
     expect(view.name).toBe('nn')
     expect(view.status).toBe('valid')
     expect(view.secretMode).toBe('safeStorage')
+  })
+})
+
+describe('handleProbe 接线', () => {
+  beforeEach(() => probeKeyMock.mockReset())
+
+  it('透传 meta.pingTimeoutMs + globalThis.fetch + deps.now 作 clock，返回 probeKey 结果', async () => {
+    const mocked = vi.mocked(probeKey)
+    mocked.mockResolvedValue({ ok: true, status: 'valid', pingMs: 42 })
+    const deps = makeDeps()
+    const out = await handleProbe(deps, { provider: 'openai', baseUrl: 'https://api.openai.com', secret: 'sk-x' })
+    expect(mocked).toHaveBeenCalledTimes(1)
+    expect(mocked).toHaveBeenCalledWith({
+      provider: 'openai',
+      baseUrl: 'https://api.openai.com',
+      secret: 'sk-x',
+      pingTimeoutMs: deps.db.data.meta.pingTimeoutMs,
+      fetchImpl: globalThis.fetch,
+      clock: deps.now
+    })
+    expect(out).toEqual({ ok: true, status: 'valid', pingMs: 42 })
+  })
+
+  it('自定义 pingTimeoutMs 生效；失败结果原样透传', async () => {
+    const mocked = vi.mocked(probeKey)
+    mocked.mockResolvedValue({ ok: false, reason: 'timeout' })
+    const deps = makeDeps({ db: makeDb([], { pingTimeoutMs: 5000 }) })
+    const out = await handleProbe(deps, { provider: 'custom', baseUrl: 'https://x', secret: 'sk' })
+    expect(mocked.mock.calls[0][0].pingTimeoutMs).toBe(5000)
+    expect(out).toEqual({ ok: false, reason: 'timeout' })
   })
 })

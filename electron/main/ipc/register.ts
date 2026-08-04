@@ -1,4 +1,4 @@
-// IPC 注册：把 14 个通道接到 ipcMain.handle，并从真实 Electron 构造 IpcDeps。
+// IPC 注册：把 15 个通道接到 ipcMain.handle，并从真实 Electron 构造 IpcDeps。
 //
 // registerIpcHandlers(deps)：每个通道 ipcMain.handle(channel, (_e, ...args) => handler(deps, ...args))。
 // createIpcDeps(parts)：用 Electron 真实副作用填充 dialog/fs/clipboard/now/setTimeout，
@@ -8,7 +8,7 @@
 import { ipcMain, dialog, clipboard, type BrowserWindow } from 'electron'
 import { promises as fs } from 'fs'
 import { Channels, type IpcDeps } from './types'
-import { toSafeView, handleList, handleAdd, handleUpdate, handleRemove, handleReveal, handleCheckNow, handleCheckAll } from './keys'
+import { toSafeView, handleList, handleAdd, handleUpdate, handleRemove, handleReveal, handleCheckNow, handleCheckAll, handleProbe } from './keys'
 import { handleIsEncryptionAvailable } from './system'
 import { handlePickAndParse, handleConfirm } from './import'
 import { handleExport, handleRestore } from './backup'
@@ -75,6 +75,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
   ipcMain.handle(Channels.keysReveal, (_e, id) => handleReveal(deps, id))
   ipcMain.handle(Channels.keysCheckNow, (_e, id, mode) => handleCheckNow(deps, id, mode))
   ipcMain.handle(Channels.keysCheckAll, (_e, mode) => handleCheckAll(deps, mode))
+  ipcMain.handle(Channels.keysProbe, (_e, input) => handleProbe(deps, input))
   ipcMain.handle(Channels.importPickAndParse, () => handlePickAndParse(deps))
   ipcMain.handle(Channels.importConfirm, (_e, sessionId, confirms) => handleConfirm(deps, sessionId, confirms))
   ipcMain.handle(Channels.backupExport, () => handleExport(deps))
