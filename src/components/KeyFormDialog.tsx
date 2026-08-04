@@ -199,7 +199,7 @@ export function KeyFormDialog({ open, onOpenChange, mode, editKey }: KeyFormDial
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Provider</Label>
+              <Label>供应商</Label>
               <Select
                 value={form.watch('provider')}
                 onValueChange={(v) => handleProviderChange(v as Provider)}

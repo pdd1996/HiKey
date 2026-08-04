@@ -19,10 +19,10 @@ export function FilterBar() {
         onValueChange={(v) => setProviderFilter(v as typeof providerFilter)}
       >
         <SelectTrigger className="w-[160px]">
-          <SelectValue placeholder="Provider" />
+          <SelectValue placeholder="供应商" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">全部 Provider</SelectItem>
+          <SelectItem value="all">全部供应商</SelectItem>
           {KNOWN_PROVIDERS.map((p) => (
             <SelectItem key={p} value={p}>{providerLabel(p)}</SelectItem>
           ))}

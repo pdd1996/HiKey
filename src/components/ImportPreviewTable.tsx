@@ -43,7 +43,7 @@ export function ImportPreviewTable({ rows, actions, onActionChange }: ImportPrev
       <TableHeader>
         <TableRow>
           <TableHead>名称</TableHead>
-          <TableHead>Provider</TableHead>
+          <TableHead>供应商</TableHead>
           <TableHead>baseUrl</TableHead>
           <TableHead>Key 掩码</TableHead>
           <TableHead>标记</TableHead>

@@ -1,4 +1,4 @@
-import { Plus, Upload, RefreshCw, Activity, Settings, LayoutDashboard } from 'lucide-react'
+import { Plus, Upload, Activity, Settings, LayoutDashboard } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 
@@ -32,21 +32,11 @@ export function TitleBar({ view, onViewChange, onAdd, onImport, onCheckAll }: Ti
               variant="outline"
               size="sm"
               onClick={() => {
-                onCheckAll('ping')
-                toast.info('已触发全部 Ping')
-              }}
-            >
-              <RefreshCw className="mr-2 h-4 w-4" /> 全部 Ping
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
                 onCheckAll('deep')
-                toast.info('已触发全部深检')
+                toast.info('已触发一键深检')
               }}
             >
-              <Activity className="mr-2 h-4 w-4" /> 全部深检
+              <Activity className="mr-2 h-4 w-4" /> 一键深检
             </Button>
           </>
         )}
