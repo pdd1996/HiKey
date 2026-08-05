@@ -10,12 +10,14 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { useSettings } from '@/providers/SettingsProvider'
+import { useKeys } from '@/providers/KeysProvider'
 
 const MIN_MIN = 5
 const MAX_MIN = 1440
 
 export function SettingsView() {
-  const { meta, encryptionAvailable, loading, setSettings, exportBackup, restoreBackup } = useSettings()
+  const { meta, encryptionAvailable, loading, setSettings, exportBackup, restoreBackup, refresh: refreshSettings } = useSettings()
+  const { refresh: refreshKeys } = useKeys()
   const [intervalDraft, setIntervalDraft] = useState<number | null>(null)
 
   if (loading || !meta) {
@@ -45,9 +47,18 @@ export function SettingsView() {
   async function handleRestore() {
     const out = await restoreBackup()
     if (out.ok) {
-      toast.success('已恢复备份', {
-        description: `迁移 ${out.migrated ? '是' : '否'}，重新加密 ${out.reencrypted} 条${out.rolledBack ? '（已回滚）' : ''}`,
-      })
+      // restoreBackup 绕过 Low 单例直接覆写 hikey-db.json，主进程虽 db.read() 刷新了
+      // 自身缓存，但渲染进程的 keys 列表 / 设置仍是恢复前的快照。必须重拉，否则
+      // UI 看起来“没恢复”（实际文件已覆盖，重启后才显现）。同 ImportDialog 的 refresh 套路。
+      await Promise.all([refreshKeys(), refreshSettings()])
+      // 描述只讲对用户有意义的两件事：结构是否升级、有几条明文密钥被升级成加密。
+      // 0 条时不展示，避免“重新加密 0 条”被误读成“0 条被恢复”。
+      const detail = [
+        out.migrated ? '数据库结构已升级' : '数据库结构无需升级',
+        ...(out.reencrypted > 0 ? [`明文密钥已升级加密 ${out.reencrypted} 条`] : []),
+        ...(out.rolledBack ? ['已回滚'] : [])
+      ].join('，')
+      toast.success('已恢复备份', { description: detail })
     } else if (out.reason !== 'cancelled') {
       toast.error('恢复失败', { description: out.message })
     }
