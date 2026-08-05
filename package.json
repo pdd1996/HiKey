@@ -10,7 +10,7 @@
     "dev": "node scripts/dev.mjs",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
-    "package": "electron-vite build && electron-builder",
+    "package": "node scripts/package.mjs",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
@@ -19,9 +19,7 @@
   },
   "dependencies": {
     "dotenv": "^17.4.2",
-    "lowdb": "^7.0.1",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "lowdb": "^7.0.1"
   },
   "devDependencies": {
     "@hookform/resolvers": "^5.7.1",
@@ -45,6 +43,8 @@
     "electron-vite": "^5.0.0",
     "lucide-react": "^1.28.0",
     "postcss": "^8.5.25",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "react-hook-form": "^7.84.0",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0",

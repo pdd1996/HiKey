@@ -5,6 +5,32 @@ directories:
   buildResources: resources
   output: release
 
+# 体积优化（参考知乎 TrisighT 文章，仅采用真实有效的 electron-builder 选项）
+# 1) asar 归档：把源码打成单文件，减少碎文件 I/O，顺带压缩体积
+asar: true
+
+# 2) files 白名单 + node_modules 精简：剔除类型定义、源码 map、文档、测试、.bin 等
+#    （其中 d.ts/README/test/.bin 等剔除规则本就是 electron-builder 默认值，这里显式写全以便审计）
+files:
+  - out/**/*
+  - package.json
+  - node_modules/**/*
+  - '!**/node_modules/*/{CHANGELOG.md,CHANGES.md,HISTORY.md,README.md,readme.md,LICENSE,LICENCE,NOTICE,*.d.ts,*.map,*.markdown,*.ts}'
+  - '!**/node_modules/.bin/**'
+  - '!**/node_modules/*/test/**'
+  - '!**/node_modules/*/tests/**'
+  - '!**/node_modules/*/__tests__/**'
+  - '!**/node_modules/*/example/**'
+  - '!**/node_modules/*/examples/**'
+  - '!**/node_modules/*/docs/**'
+  - '!**/node_modules/*/.github/**'
+
+# 3) 精简 Electron 内置语言包（ICU locale .pak），仅保留中英文
+#    替代文章中虚构的 spellcheck.languages 选项；electron-builder 真实支持 electronLanguages
+electronLanguages:
+  - en-US
+  - zh-CN
+
 # Windows NSIS 安装包（M6 实际打包验证；M1 仅配置就位）
 win:
   # 默认查找 buildResources/icon.ico，即 resources/icon.ico；
