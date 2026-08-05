@@ -90,6 +90,12 @@ function createWindow(): BrowserWindow {
     show: false,
     autoHideMenuBar: true,
     title: 'HiKey',
+    // 隐藏原生标题栏：让渲染进程的 TitleBar 接管顶部 UI（HiKey 大标题、视图切换、
+    // 一键深检、设置、主题切换等按钮已在 src/components/TitleBar.tsx 实现）。
+    // 这样原生 frame 不会在不同主题下出现违和的白色条，且能跟随 .dark class 自动变色。
+    // 拖动/最大化行为由 macOS 自动处理，Windows/Linux 需前端额外处理（见 TitleBar.tsx）。
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
+    trafficLightPosition: process.platform === 'darwin' ? { x: 12, y: 14 } : undefined,
     // 窗口/任务栏图标：dev 直指源文件，生产指向 resources/icons/icon.ico。
     icon: join(__dirname, '../../resources/icons/icon.ico'),
     webPreferences: {

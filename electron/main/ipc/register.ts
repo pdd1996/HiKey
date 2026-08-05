@@ -82,4 +82,17 @@ export function registerIpcHandlers(deps: IpcDeps): void {
   ipcMain.handle(Channels.backupRestore, () => handleRestore(deps))
   ipcMain.handle(Channels.settingsGet, () => handleGet(deps))
   ipcMain.handle(Channels.settingsSet, (_e, partial) => handleSet(deps, partial))
+
+  // 自定义窗口控件（仅当主进程 titleBarStyle: 'hidden' 时使用）。
+  // 注意：registerIpcHandlers 在 createWindow() 之前调用（见 index.ts），
+  // 此时 getMainWindow() 仍为 undefined。故 handler 内必须每次现取主窗口，
+  // 不能在注册时捕获闭包——否则 win 永远是 undefined，最小化/最大化/关闭无效。
+  ipcMain.handle(Channels.windowMinimize, () => { deps.getMainWindow()?.minimize() })
+  ipcMain.handle(Channels.windowToggleMaximize, () => {
+    const win = deps.getMainWindow()
+    if (!win || win.isDestroyed()) return
+    if (win.isMaximized()) win.unmaximize()
+    else win.maximize()
+  })
+  ipcMain.handle(Channels.windowClose, () => { deps.getMainWindow()?.close() })
 }

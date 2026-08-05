@@ -10,6 +10,7 @@ import { keys } from './keys'
 import { importer } from './import'
 import { backup } from './backup'
 import { settings } from './settings'
+import { windowCtl as windowApi } from './window'
 
 export type { HikeyApi }
 
@@ -26,5 +27,6 @@ export const hikeyApi: HikeyApi = {
   import: importer,
   backup,
   settings,
+  window: windowApi,
   onStatusUpdate
 }

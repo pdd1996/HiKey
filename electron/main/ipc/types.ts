@@ -53,7 +53,12 @@ export const Channels = {
   backupRestore: 'backup:restore',
   statusUpdate: 'status:update',
   settingsGet: 'settings:get',
-  settingsSet: 'settings:set'
+  settingsSet: 'settings:set',
+  // 隐藏原生标题栏后，渲染进程接管最小化/最大化/关闭按钮。
+  // 仅作用于主窗口（getMainWindow()），多窗口场景后续若需要再扩。
+  windowMinimize: 'window:minimize',
+  windowToggleMaximize: 'window:toggleMaximize',
+  windowClose: 'window:close'
 } as const
 
 /** dialog 子集接口（仅暴露 handler 用到的方法，便于测试 mock）。 */
@@ -166,6 +171,16 @@ export interface HikeyApi {
   settings: {
     get(): Promise<Meta>
     set(partial: Partial<Meta>): Promise<SetSettingsResult>
+  }
+  /**
+   * 自定义窗口控件：仅在主进程 titleBarStyle: 'hidden' 后，Windows/Linux 需要
+   * 前端最小化/最大化/关闭时才有意义。macOS 走 hiddenInset，由系统红绿灯负责。
+   * 全部走主窗口（IpcDeps.getMainWindow）；窗口不存在时静默 no-op。
+   */
+  window: {
+    minimize(): Promise<void>
+    toggleMaximize(): Promise<void>
+    close(): Promise<void>
   }
   /** 订阅状态变更，返回取消订阅函数。 */
   onStatusUpdate(cb: (payload: { id: string; record: SafeKeyView }) => void): () => void
