@@ -178,6 +178,25 @@ describe('checkKey', () => {
     expect(out.lastCheckMode).toBe('ping')
   })
 
+  it('deep 超时 → timeout + pingMs undefined（避免列表"超时 / 244ms"自相矛盾）', async () => {
+    // ping 先成功（带 clock 计时 244ms），deep 永不 resolve → 本地 timer abort
+    const neverResolve = async (_url: string, init: RequestInit) =>
+      new Promise((_resolve, reject) => {
+        init.signal?.addEventListener('abort', () => reject(new Error('aborted')))
+      })
+    const f = vi.fn(async (url: string, init: RequestInit) => {
+      // 第一次（ping）正常返回 200；第二次（deep）挂起等 abort
+      if (url.includes('/models')) return { status: 200, json: async () => ({ data: [] }) } as unknown as Response
+      return neverResolve(url, init)
+    }) as unknown as FetchImpl
+    let t = 1000
+    const clock = () => (t += 244) // ping 段计时，确保无修复时 pingMs 会非空
+    const out = await checkKey(rec(), meta({ deepTimeoutMs: 10 }), 'manual', f, NOW, 'deep', undefined, clock)
+    expect(out.status).toBe('timeout')
+    expect(out.lastCheckMode).toBe('deep')
+    expect(out.pingMs).toBeUndefined()
+  })
+
   it('deep 400 → 400 + lastError', async () => {
     const f = fetchSeq({ status: 200 }, { status: 400, body: { error: { code: 'model_not_found' } } })
     const out = await checkKey(rec(), meta(), 'manual', f, NOW)

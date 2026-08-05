@@ -150,8 +150,10 @@ export async function checkKey(
     signal
   )
   if (!deepRes.ok) {
-    // 深检超时/网络异常；记录深检已尝试
-    return { status: deepRes.kind === 'timeout' ? 'timeout' : 'network_error', lastChecked: now, lastCheckMode: 'deep', lastDeepCheckedAt: now, pingMs }
+    // 深检超时/网络异常；记录深检已尝试。
+    // pingMs 是 ping 的延迟，与深检超时无关——带出去会让列表"超时 / 244ms"自相矛盾，
+    // 故按 schema 约定（网络/超时失败留 undefined）丢弃。
+    return { status: deepRes.kind === 'timeout' ? 'timeout' : 'network_error', lastChecked: now, lastCheckMode: 'deep', lastDeepCheckedAt: now, pingMs: undefined }
   }
   const deep = classifyDeep(deepRes.status, deepRes.body)
   return {
