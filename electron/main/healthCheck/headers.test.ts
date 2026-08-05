@@ -19,7 +19,7 @@ describe('DEFAULT_TEST_MODEL', () => {
 
   it('其余三项非空', () => {
     expect(DEFAULT_TEST_MODEL.openai).toBe('gpt-5.5')
-    expect(DEFAULT_TEST_MODEL.anthropic).toBe('claude-opus-4-6')
+    expect(DEFAULT_TEST_MODEL.anthropic).toBe('claude-sonnet-5')
     expect(DEFAULT_TEST_MODEL.deepseek).toBe('deepseek-v4-flash')
   })
 })

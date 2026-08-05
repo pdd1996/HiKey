@@ -102,7 +102,7 @@
 - Anthropic：`POST {baseUrl}/v1/messages`，headers 含 `x-api-key` + `anthropic-version`，body 含 `model`、`max_tokens: 1`、`messages`
 - DeepSeek：`POST {baseUrl}/v1/chat/completions`，默认测试模型 `deepseek-v4-flash`
 - Custom：用户填 baseUrl 和 testModel，请求体同 OpenAI；端点原样拼接 `{用户baseUrl}/chat/completions`（不追加 /v1）
-- 测试模型：每条记录 `testModel` 可配（所有 provider 均可在表单"高级项"编辑，非仅 Custom）；Custom 必填（无默认，用户自由填写），其他 provider 在内置名单下拉中选择、预填默认但可改；内置名单 `gpt-5.6-sol` / `gpt-5.6-terra` / `gpt-5.6-luna` / `gpt-5.5`（openai，默认 `gpt-5.5`）、`claude-opus-4-8` / `claude-opus-4-7` / `claude-opus-4-6` / `claude-sonnet-4-6` / `claude-fable-5`（anthropic，默认 `claude-opus-4-6`）、`deepseek-v4-flash` / `deepseek-v4-pro`（deepseek，默认 `deepseek-v4-flash`）；模型名随时可能因 provider 下线而过期，以"可配置 + 集中维护内置名单"为准
+- 测试模型：每条记录 `testModel` 可配（所有 provider 均可在表单"高级项"编辑，非仅 Custom）；Custom 必填（无默认，用户自由填写），其他 provider 在内置名单下拉中选择、预填默认但可改；内置名单 `gpt-5.6-sol` / `gpt-5.6-terra` / `gpt-5.6-luna` / `gpt-5.5`（openai，默认 `gpt-5.5`）、`claude-fable-5` / `claude-opus-5` / `claude-sonnet-5` / `claude-haiku-4-5-20251001`（anthropic，默认 `claude-sonnet-5`）、`deepseek-v4-flash` / `deepseek-v4-pro`（deepseek，默认 `deepseek-v4-flash`）；模型名随时可能因 provider 下线而过期，以"可配置 + 集中维护内置名单"为准
 - 二级映射（按错误性质分类）：
   - 2xx -> valid
   - 401/403 且错误码命中欠费类 -> quota_exceeded；401/403 其他 -> invalid

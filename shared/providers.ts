@@ -22,7 +22,7 @@ export const DEFAULT_BASE_URL: Record<Exclude<Provider, 'custom'>, string> = {
 /** 各 provider 默认测试模型（custom 无默认，必填）。M3 联调后定稿。 */
 export const DEFAULT_TEST_MODEL: Record<Provider, string> = {
   openai: 'gpt-5.5',
-  anthropic: 'claude-opus-4-6',
+  anthropic: 'claude-sonnet-5',
   deepseek: 'deepseek-v4-flash',
   custom: ''
 }
@@ -34,7 +34,7 @@ export const DEFAULT_TEST_MODEL: Record<Provider, string> = {
  */
 export const TEST_MODEL_OPTIONS: Record<Exclude<Provider, 'custom'>, string[]> = {
   openai: ['gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.5'],
-  anthropic: ['claude-opus-4-8', 'claude-opus-4-7', 'claude-opus-4-6', 'claude-sonnet-4-6', 'claude-fable-5'],
+  anthropic: ['claude-fable-5', 'claude-opus-5', 'claude-sonnet-5', 'claude-haiku-4-5-20251001'],
   deepseek: ['deepseek-v4-flash', 'deepseek-v4-pro']
 }
 
