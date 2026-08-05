@@ -90,9 +90,10 @@ export class Scheduler {
     return this.keys.find((k) => k.id === id)
   }
 
-  /** 启动：立即首检一轮，再按间隔排下一轮。 */
+  /** 启动：立即首检一轮，再按间隔排下一轮。healthCheckEnabled=false 时跳过自动轮询（手动检测仍可用）。 */
   start(): void {
     this.stopped = false
+    if (!this.meta.healthCheckEnabled) return // 自动检测关闭：不首检、不排程；stopped=false 保留手动检测
     void this.runRound('poll')
     this.scheduleNext()
   }
@@ -110,14 +111,18 @@ export class Scheduler {
     this.roundRunning = false
   }
 
-  /** meta 变更后重设间隔（M5 settings:set 调用）。 */
+  /** meta 变更后重设间隔（M5 settings:set 调用）。healthCheckEnabled 关闭则清掉 timer、不排程。 */
   reschedule(): void {
+    const wasRunning = this.timer !== null
     if (this.timer) {
       clearTimeout(this.timer)
       this.timer = null
     }
     this.sem.setCap(this.meta.concurrentChecks)
-    if (!this.stopped) this.scheduleNext()
+    if (this.stopped || !this.meta.healthCheckEnabled) return // 自动检测关闭：清掉 timer 即可，手动仍可用
+    // 从关→开（wasRunning=false）且当前无在飞轮时，立即补一轮首检；开着改间隔则只重排下一 tick
+    if (!wasRunning && !this.roundRunning) void this.runRound('poll')
+    this.scheduleNext()
   }
 
   /** 单条立即检测：取消该 key 在飞，重发 manual。mode 默认 ping（轻）。计入共享并发。 */
@@ -150,9 +155,11 @@ export class Scheduler {
 
   private scheduleNext(): void {
     if (this.stopped) return
+    if (!this.meta.healthCheckEnabled) return // 自动检测关闭：不排下一轮
     const intervalMs = this.meta.checkIntervalMinutes * 60_000
     this.timer = setTimeout(() => {
       if (this.stopped) return
+      if (!this.meta.healthCheckEnabled) return // 排程后用户关开关 → 不再触发
       // 上一轮未完成 → 静默跳过本轮
       if (!this.roundRunning) void this.runRound('poll')
       this.scheduleNext()

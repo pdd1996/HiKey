@@ -269,4 +269,52 @@ describe('Scheduler', () => {
     expect(updated.filter((id) => id === a.id).length).toBeGreaterThan(0)
     expect(updated.filter((id) => id === b.id).length).toBeGreaterThan(0)
   })
+
+  it('healthCheckEnabled=false → start 不首检、不排程，推进时间也无 fetch', async () => {
+    const db = makeDb([key(), key()], {
+      healthCheckEnabled: false,
+      deepCheckEnabled: false,
+      checkIntervalMinutes: 1
+    })
+    const gate = makeGateFetch(200)
+    const sched = new Scheduler(db, gate.impl)
+    sched.start()
+    await flush()
+    expect(gate.calls.length).toBe(0)
+    await vi.advanceTimersByTimeAsync(120_000)
+    expect(gate.calls.length).toBe(0)
+    sched.stop()
+  })
+
+  it('healthCheckEnabled 关→开（reschedule）→ 立即补一轮首检', async () => {
+    const db = makeDb([key()], {
+      healthCheckEnabled: false,
+      deepCheckEnabled: false,
+      checkIntervalMinutes: 1
+    })
+    const gate = makeGateFetch(200)
+    const sched = new Scheduler(db, gate.impl)
+    sched.start()
+    await flush()
+    expect(gate.calls.length).toBe(0)
+    db.data.meta.healthCheckEnabled = true
+    sched.reschedule()
+    await settle(gate)
+    expect(db.data.keys[0].status).toBe('200')
+    sched.stop()
+  })
+
+  it('healthCheckEnabled=false 下 checkNow(deep) 仍执行（手动不受限）', async () => {
+    const a = key({ deepCheck: false })
+    const db = makeDb([a], { healthCheckEnabled: false, deepCheckEnabled: false })
+    const gate = makeGateFetch(200)
+    const sched = new Scheduler(db, gate.impl)
+    sched.start()
+    await flush()
+    expect(gate.calls.length).toBe(0)
+    sched.checkNow(a.id, 'deep')
+    await settle(gate)
+    const r = db.data.keys.find((k) => k.id === a.id)!
+    expect(r.lastCheckMode).toBe('deep')
+  })
 })
