@@ -1,5 +1,8 @@
 # HiKey
 
+[![中文](https://img.shields.io/badge/语言-中文-blue.svg)](README.md)
+[![English](https://img.shields.io/badge/lang-English-blue.svg)](README.en.md)
+
 > 本地优先、零云端的 LLM API Key 管理面板，带自动健康检测。
 
 [![版本](https://img.shields.io/badge/version-0.1.0-blue.svg)]()

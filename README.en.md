@@ -1,5 +1,8 @@
 # HiKey
 
+[![中文](https://img.shields.io/badge/语言-中文-blue.svg)](README.md)
+[![English](https://img.shields.io/badge/lang-English-blue.svg)](README.en.md)
+
 > A local-first, zero-cloud LLM API Key management panel with automatic health checks.
 
 [![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)]()
