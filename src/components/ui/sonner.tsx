@@ -6,15 +6,17 @@ import {
   TriangleAlert,
 } from "lucide-react"
 import { Toaster as Sonner } from "sonner"
+import { useTheme } from "@/providers/ThemeProvider"
 
 type ToasterProps = React.ComponentProps<typeof Sonner>
 
-// M6 无明暗主题切换（globals.css 仅 light 生效）。去掉 next-themes 依赖，
-// Sonner 自身默认 theme="system"。
+// Sonner 的 theme 跟随 ThemeProvider 当前生效主题（resolvedTheme），
+// 使 toast 配色与 .dark class 驱动的 CSS 变量一致。
 const Toaster = ({ ...props }: ToasterProps) => {
+  const { resolvedTheme } = useTheme()
   return (
     <Sonner
-      theme="light"
+      theme={resolvedTheme}
       className="toaster group"
       icons={{
         success: <CircleCheck className="h-4 w-4" />,

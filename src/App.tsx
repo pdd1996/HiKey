@@ -8,6 +8,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { KeysProvider, useKeys } from '@/providers/KeysProvider'
 import { SettingsProvider } from '@/providers/SettingsProvider'
+import { ThemeProvider } from '@/providers/ThemeProvider'
 import { Toaster } from '@/components/ui/sonner'
 import { TitleBar, type View } from '@/components/TitleBar'
 import { FilterBar } from '@/components/FilterBar'
@@ -81,11 +82,13 @@ function AppShell() {
 
 export default function App() {
   return (
-    <KeysProvider>
-      <SettingsProvider>
-        <AppShell />
-        <Toaster />
-      </SettingsProvider>
-    </KeysProvider>
+    <ThemeProvider>
+      <KeysProvider>
+        <SettingsProvider>
+          <AppShell />
+          <Toaster />
+        </SettingsProvider>
+      </KeysProvider>
+    </ThemeProvider>
   )
 }
