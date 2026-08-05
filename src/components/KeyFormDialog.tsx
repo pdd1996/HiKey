@@ -313,7 +313,7 @@ function TestResultBar({
 }) {
   if (phase === 'pending') {
     return (
-      <div className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-gray-100 px-3 py-1.5 text-sm text-gray-600">
+      <div className="inline-flex items-center gap-2 rounded-md border border-muted bg-muted px-3 py-1.5 text-sm text-muted-foreground">
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
         测试中…
       </div>
@@ -348,7 +348,7 @@ function TestResultBar({
   // ok:false → 网络错误 / 请求超时（灰）
   const ms = result.pingMs != null ? ` (${result.pingMs} ms)` : ''
   return (
-    <div className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-gray-100 px-3 py-1.5 text-sm text-gray-600">
+    <div className="inline-flex items-center gap-2 rounded-md border border-muted bg-muted px-3 py-1.5 text-sm text-muted-foreground">
       <X className="h-3.5 w-3.5" />
       {result.reason === 'timeout' ? `请求超时${ms}` : '网络错误'}
     </div>

@@ -109,7 +109,7 @@ export function SettingsView() {
 
       <SettingsCard title="加密与明文">
         <p className="text-xs text-muted-foreground">
-          safeStorage 状态：<span className={encryptionAvailable ? 'text-green-600' : 'text-red-600'}>
+          safeStorage 状态：<span className={encryptionAvailable ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
             {encryptionAvailable ? '可用（密钥以密文存储）' : '不可用（密钥将以明文存储）'}
           </span>
           {meta.plaintextMode && '　· 当前存在明文记录。'}
