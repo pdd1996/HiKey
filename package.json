@@ -1,7 +1,7 @@
 {
   "name": "hikey",
   "productName": "HiKey",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "本地优先、零云端的 LLM API Key 管理面板",
   "main": "out/main/index.js",
   "author": "HiKey",
