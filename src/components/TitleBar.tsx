@@ -1,6 +1,5 @@
 import { Plus, Upload, Activity, Settings, LayoutDashboard } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { toast } from 'sonner'
 
 export type View = 'dashboard' | 'settings'
 
@@ -31,10 +30,7 @@ export function TitleBar({ view, onViewChange, onAdd, onImport, onCheckAll }: Ti
             <Button
               variant="outline"
               size="sm"
-              onClick={() => {
-                onCheckAll('deep')
-                toast.info('已触发一键深检')
-              }}
+              onClick={() => onCheckAll('deep')}
             >
               <Activity className="mr-2 h-4 w-4" /> 一键深检
             </Button>
