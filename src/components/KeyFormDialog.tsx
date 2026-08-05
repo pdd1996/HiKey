@@ -6,7 +6,7 @@
 // 编辑模式 secret 留空=不改；添加模式 secret 必填。
 // 保存后主进程自动 checkNow（M5 已接线），这里只关弹窗 + toast。
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -42,6 +42,71 @@ function defaultBaseUrl(provider: Provider): string {
 }
 function defaultTestModel(provider: Provider): string {
   return DEFAULT_TEST_MODEL[provider]
+}
+
+/**
+ * 可输入 + 可选下拉的 testModel 选择器（combobox）。
+ * 内置名单仅作建议：用户可自由输入名单外的模型名。
+ * custom provider 无内置名单，退化为纯输入框。
+ */
+function ModelComboBox({
+  value,
+  onChange,
+  options,
+  placeholder,
+}: {
+  value: string
+  onChange: (v: string) => void
+  options: string[]
+  placeholder?: string
+}) {
+  const [open, setOpen] = useState(false)
+
+  // 当前输入值在名单中（忽略大小写、去空格）的匹配项作为下拉建议
+  const suggestions = useMemo(() => {
+    const q = value.trim().toLowerCase()
+    if (!q) return options
+    return options.filter((m) => m.toLowerCase().includes(q))
+  }, [value, options])
+
+  function setAndClose(v: string) {
+    onChange(v)
+    setOpen(false)
+  }
+
+  return (
+    <div className="relative">
+      <Input
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => {
+          onChange(e.target.value)
+          setOpen(true)
+        }}
+        onFocus={() => setOpen(true)}
+        // 点击外部真正失焦时直接关闭；点下拉项时 onMouseDown 会 preventDefault，input 不失焦
+        onBlur={() => setOpen(false)}
+      />
+      {open && suggestions.length > 0 && (
+        <div className="absolute z-50 mt-1 max-h-56 w-full overflow-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+          {suggestions.map((m) => (
+            <button
+              type="button"
+              key={m}
+              className="flex w-full items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+              // 阻止 mousedown 冒泡到 input 的 blur，点击建议项时 input 保持焦点，
+              // 随后 onClick 正常触发 setAndClose，无需定时器抢跑
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setAndClose(m)}
+            >
+              {m}
+              {m === value && <Check className="ml-auto h-3.5 w-3.5" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 const schema = z
@@ -256,26 +321,12 @@ export function KeyFormDialog({ open, onOpenChange, mode, editKey }: KeyFormDial
             <div className="space-y-4 rounded-md border p-4">
               <div className="space-y-2">
                 <Label>testModel{provider === 'custom' && '（必填）'}</Label>
-                {provider === 'custom' ? (
-                  <Input {...form.register('testModel')} placeholder="gpt-5.5" />
-                ) : (
-                  <Select
-                    value={testModelValue}
-                    onValueChange={(v) => form.setValue('testModel', v)}
-                  >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {(() => {
-                        const opts = TEST_MODEL_OPTIONS[provider]
-                        // 编辑模式历史值不在内置名单时，追加一项避免下拉空值
-                        const extra = testModelValue && !opts.includes(testModelValue) ? [testModelValue] : []
-                        return [...extra, ...opts].map((m) => (
-                          <SelectItem key={m} value={m}>{m}</SelectItem>
-                        ))
-                      })()}
-                    </SelectContent>
-                  </Select>
-                )}
+                <ModelComboBox
+                  value={testModelValue}
+                  onChange={(v) => form.setValue('testModel', v)}
+                  options={provider === 'custom' ? [] : TEST_MODEL_OPTIONS[provider]}
+                  placeholder={provider === 'custom' ? 'gpt-5.5' : '输入或选择模型名'}
+                />
                 {form.formState.errors.testModel && (
                   <p className="text-sm text-destructive">{form.formState.errors.testModel.message}</p>
                 )}
