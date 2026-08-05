@@ -21,10 +21,21 @@ export const DEFAULT_BASE_URL: Record<Exclude<Provider, 'custom'>, string> = {
 
 /** 各 provider 默认测试模型（custom 无默认，必填）。M3 联调后定稿。 */
 export const DEFAULT_TEST_MODEL: Record<Provider, string> = {
-  openai: 'gpt-4o-mini',
-  anthropic: 'claude-3-5-haiku-latest',
-  deepseek: 'deepseek-chat',
+  openai: 'gpt-5.5',
+  anthropic: 'claude-opus-4-6',
+  deepseek: 'deepseek-v4-flash',
   custom: ''
+}
+
+/**
+ * 各 provider 内置测试模型名单（custom 无名单，用户自由填写）。
+ * 名单顺序即下拉展示顺序；DEFAULT_TEST_MODEL 的值必在对应名单内。
+ * 模型名随时可能因 provider 下线而过期，以"可配置 + 集中维护内置名单"为准。
+ */
+export const TEST_MODEL_OPTIONS: Record<Exclude<Provider, 'custom'>, string[]> = {
+  openai: ['gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.5'],
+  anthropic: ['claude-opus-4-8', 'claude-opus-4-7', 'claude-opus-4-6', 'claude-sonnet-4-6', 'claude-fable-5'],
+  deepseek: ['deepseek-v4-flash', 'deepseek-v4-pro']
 }
 
 /** .env 变量名 → provider 映射（仅已知三类；custom 不经 .env）。 */

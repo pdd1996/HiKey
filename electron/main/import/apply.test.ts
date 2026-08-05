@@ -86,7 +86,7 @@ describe('applyImport — add / force-add', () => {
     expect(rec.secretMode).toBe('safeStorage')
     expect(rec.status).toBeUndefined()
     expect(rec.deepCheck).toBe(true)
-    expect(rec.testModel).toBe('gpt-4o-mini')
+    expect(rec.testModel).toBe('gpt-5.5')
     expect(rec.notes).toBe('')
     expect(rec.createdAt).toBe(NOW)
     expect(rec.updatedAt).toBe(NOW)

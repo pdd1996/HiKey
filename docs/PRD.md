@@ -100,9 +100,9 @@
 - 前置条件：轮询深检执行需同时满足"全局 `deepCheckEnabled` 开 + 该记录 `deepCheck=true` + ping=valid"，否则轮询只做 ping；新增/编辑/手动触发的深检不受 `deepCheckEnabled` 限制；新增记录的 `deepCheck` 默认 true
 - OpenAI：`POST {baseUrl}/v1/chat/completions`，body 含 `model`、`messages`、`max_tokens: 1`
 - Anthropic：`POST {baseUrl}/v1/messages`，headers 含 `x-api-key` + `anthropic-version`，body 含 `model`、`max_tokens: 1`、`messages`
-- DeepSeek：`POST {baseUrl}/v1/chat/completions`，默认测试模型 `deepseek-chat`
+- DeepSeek：`POST {baseUrl}/v1/chat/completions`，默认测试模型 `deepseek-v4-flash`
 - Custom：用户填 baseUrl 和 testModel，请求体同 OpenAI；端点原样拼接 `{用户baseUrl}/chat/completions`（不追加 /v1）
-- 测试模型：每条记录 `testModel` 可配（所有 provider 均可在表单"高级项"编辑，非仅 Custom）；Custom 必填（无默认），其他 provider 预填默认但可改；MVP 首版暂定名单 `gpt-4o-mini` / `claude-3-5-haiku-latest` / `deepseek-chat`，M3 真实 Key 联调后定稿；模型名随时可能因 provider 下线而过期，以"可配置 + 集中维护内置名单"为准
+- 测试模型：每条记录 `testModel` 可配（所有 provider 均可在表单"高级项"编辑，非仅 Custom）；Custom 必填（无默认，用户自由填写），其他 provider 在内置名单下拉中选择、预填默认但可改；内置名单 `gpt-5.6-sol` / `gpt-5.6-terra` / `gpt-5.6-luna` / `gpt-5.5`（openai，默认 `gpt-5.5`）、`claude-opus-4-8` / `claude-opus-4-7` / `claude-opus-4-6` / `claude-sonnet-4-6` / `claude-fable-5`（anthropic，默认 `claude-opus-4-6`）、`deepseek-v4-flash` / `deepseek-v4-pro`（deepseek，默认 `deepseek-v4-flash`）；模型名随时可能因 provider 下线而过期，以"可配置 + 集中维护内置名单"为准
 - 二级映射（按错误性质分类）：
   - 2xx -> valid
   - 401/403 且错误码命中欠费类 -> quota_exceeded；401/403 其他 -> invalid

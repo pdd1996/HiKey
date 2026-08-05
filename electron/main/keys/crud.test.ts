@@ -70,7 +70,7 @@ describe('addKey', () => {
     expect(rec.secretMode).toBe('safeStorage')
     expect(rec.encSecret).toBe(encFor('sk-x'))
     expect(rec.status).toBeUndefined()
-    expect(rec.testModel).toBe('gpt-4o-mini')
+    expect(rec.testModel).toBe('gpt-5.5')
     expect(rec.createdAt).toBe(1000)
     expect(rec.deepCheck).toBe(true)
   })

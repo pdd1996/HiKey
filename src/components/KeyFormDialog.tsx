@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { useKeys } from '@/providers/KeysProvider'
-import { DEFAULT_BASE_URL, DEFAULT_TEST_MODEL, KNOWN_PROVIDERS } from '@shared/providers'
+import { DEFAULT_BASE_URL, DEFAULT_TEST_MODEL, TEST_MODEL_OPTIONS, KNOWN_PROVIDERS } from '@shared/providers'
 import { providerLabel, statusBadge } from '@/lib/status'
 import type { Provider } from '@shared/providers'
 import type { KeyInput } from '@main/keys/types'
@@ -113,6 +113,7 @@ export function KeyFormDialog({ open, onOpenChange, mode, editKey }: KeyFormDial
   // provider 切换（仅用户主动切换时触发，不覆盖编辑初始值）
   const provider = form.watch('provider')
   const secretValue = form.watch('secret')
+  const testModelValue = form.watch('testModel')
   // 编辑模式留空 secret = 不改 key，无明文无法测试 → 禁用测试按钮
   const testDisabled = isEdit && secretValue.trim() === ''
   function handleProviderChange(v: Provider) {
@@ -255,7 +256,26 @@ export function KeyFormDialog({ open, onOpenChange, mode, editKey }: KeyFormDial
             <div className="space-y-4 rounded-md border p-4">
               <div className="space-y-2">
                 <Label>testModel{provider === 'custom' && '（必填）'}</Label>
-                <Input {...form.register('testModel')} placeholder="gpt-4o-mini" />
+                {provider === 'custom' ? (
+                  <Input {...form.register('testModel')} placeholder="gpt-5.5" />
+                ) : (
+                  <Select
+                    value={testModelValue}
+                    onValueChange={(v) => form.setValue('testModel', v)}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {(() => {
+                        const opts = TEST_MODEL_OPTIONS[provider]
+                        // 编辑模式历史值不在内置名单时，追加一项避免下拉空值
+                        const extra = testModelValue && !opts.includes(testModelValue) ? [testModelValue] : []
+                        return [...extra, ...opts].map((m) => (
+                          <SelectItem key={m} value={m}>{m}</SelectItem>
+                        ))
+                      })()}
+                    </SelectContent>
+                  </Select>
+                )}
                 {form.formState.errors.testModel && (
                   <p className="text-sm text-destructive">{form.formState.errors.testModel.message}</p>
                 )}
