@@ -90,6 +90,8 @@ function createWindow(): BrowserWindow {
     show: false,
     autoHideMenuBar: true,
     title: 'HiKey',
+    // 窗口/任务栏图标：dev 直指源文件，生产指向 resources/icons/icon.ico。
+    icon: join(__dirname, '../../resources/icons/icon.ico'),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       // 安全基线（技术栈 §4.2，M1 即落地）

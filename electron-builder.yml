@@ -7,6 +7,9 @@ directories:
 
 # Windows NSIS 安装包（M6 实际打包验证；M1 仅配置就位）
 win:
+  # 默认查找 buildResources/icon.ico，即 resources/icon.ico；
+  # 实际图标在 resources/icons/icon.ico，需显式指定。
+  icon: resources/icons/icon.ico
   target:
     - target: nsis
       arch:
