@@ -17,12 +17,12 @@ interface KeyRowProps {
 export function KeyRow({ k, onReveal, onEdit, onRemove, onCheckNow }: KeyRowProps) {
   return (
     <TableRow>
-      <TableCell className="font-medium">{k.name}</TableCell>
-      <TableCell><ProviderBadge provider={k.provider} /></TableCell>
-      <TableCell><StatusBadge status={k.status} /></TableCell>
-      <TableCell className="text-muted-foreground">{formatRelative(k.lastChecked)}</TableCell>
-      <TableCell className="text-muted-foreground">{formatPingMs(k.pingMs)}</TableCell>
-      <TableCell className="text-right">
+      <TableCell className="font-medium text-center">{k.name}</TableCell>
+      <TableCell className="text-center"><ProviderBadge provider={k.provider} /></TableCell>
+      <TableCell className="text-center"><StatusBadge status={k.status} /></TableCell>
+      <TableCell className="text-muted-foreground text-center">{formatRelative(k.lastChecked)}</TableCell>
+      <TableCell className="text-muted-foreground text-center">{formatPingMs(k.pingMs)}</TableCell>
+      <TableCell className="text-center">
         <div className="inline-flex items-center gap-1">
           <Button
             variant="ghost"

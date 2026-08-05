@@ -26,12 +26,12 @@ export function KeyTable({ keys, loading, onReveal, onEdit, onRemove, onCheckNow
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>名称</TableHead>
-          <TableHead>供应商</TableHead>
-          <TableHead>状态</TableHead>
-          <TableHead>最新检测</TableHead>
-          <TableHead>延迟</TableHead>
-          <TableHead className="text-right">操作</TableHead>
+          <TableHead className="text-center">名称</TableHead>
+          <TableHead className="text-center">供应商</TableHead>
+          <TableHead className="text-center">状态</TableHead>
+          <TableHead className="text-center">最新检测</TableHead>
+          <TableHead className="text-center">延迟</TableHead>
+          <TableHead className="text-center">操作</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
