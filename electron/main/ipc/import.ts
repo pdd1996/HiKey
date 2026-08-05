@@ -8,7 +8,7 @@
 // 接线逻辑：扩展名分流 + 解析错误映射 + 会话反查，单测覆盖。
 
 import { randomUUID } from 'crypto'
-import { extname } from 'path'
+import { basename, extname } from 'path'
 import { parseEnvFile } from '../import/env'
 import { parseJsonFile } from '../import/json'
 import { buildPreview } from '../import/preview'
@@ -31,7 +31,10 @@ export async function handlePickAndParse(deps: IpcDeps): Promise<PickAndParseRes
 
   const filePath = res.filePaths[0]
   const ext = extname(filePath).toLowerCase()
-  if (ext !== '.env' && ext !== '.json') {
+  const base = basename(filePath).toLowerCase()
+  // extname('.env') === ''（点开头无主名），需用 basename 兜底识别裸 .env 文件
+  const isEnv = ext === '.env' || base === '.env' || base.startsWith('.env.')
+  if (!isEnv && ext !== '.json') {
     return { ok: false, error: '仅支持 .env / .json 文件' }
   }
 
@@ -45,7 +48,7 @@ export async function handlePickAndParse(deps: IpcDeps): Promise<PickAndParseRes
   // 按扩展名分流解析
   let parsed
   try {
-    if (ext === '.env') {
+    if (isEnv) {
       parsed = parseEnvFile(content)
     } else {
       parsed = parseJsonFile(content)

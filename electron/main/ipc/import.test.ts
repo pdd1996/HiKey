@@ -84,6 +84,19 @@ describe('handlePickAndParse', () => {
     const out = await handlePickAndParse(deps)
     expect(out).toEqual({ ok: false, error: '仅支持 .env / .json 文件' })
   })
+
+  it('裸 .env 文件（无主名）→ 按 .env 解析', async () => {
+    const deps = makeDeps({
+      dialog: { showOpenDialog: async () => ({ canceled: false, filePaths: ['/tmp/.env'] }) } as never,
+      fs: { readFile: async () => 'OPENAI_API_KEY=sk-x\n' } as never
+    })
+    const out = await handlePickAndParse(deps)
+    expect(out).toEqual({ ok: true, sessionId: expect.any(String), rows: expect.any(Array) })
+    if (out && out.ok) {
+      expect(out.rows.length).toBe(1)
+      expect(out.rows[0].provider).toBe('openai')
+    }
+  })
 })
 
 describe('handleConfirm', () => {
