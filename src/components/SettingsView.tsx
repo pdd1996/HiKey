@@ -54,11 +54,19 @@ export function SettingsView() {
   }
 
   const intervalValue = intervalDraft ?? meta.checkIntervalMinutes
+  const autoDisabled = !meta.healthCheckEnabled
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 p-6">
-      <SettingsCard title="检测">
-        <div className="space-y-2">
+      <SettingsCard title="定时检测">
+        <ToggleRow
+          label="自动检测"
+          desc="开启后按设定间隔自动轮询所有 Key 的连通性；关闭则不进行任何自动检测，手动「立即检测 / 一键深检」不受影响。"
+          checked={meta.healthCheckEnabled}
+          onCheckedChange={(v) => void applySettings({ healthCheckEnabled: v })}
+        />
+
+        <div className={`space-y-2 ${autoDisabled ? 'pointer-events-none opacity-50' : ''}`}>
           <div className="flex items-center justify-between">
             <Label>检测间隔</Label>
             <span className="text-sm text-muted-foreground">{intervalValue} 分钟</span>
@@ -68,6 +76,7 @@ export function SettingsView() {
             min={MIN_MIN}
             max={MAX_MIN}
             step={1}
+            disabled={autoDisabled}
             onValueChange={(v) => setIntervalDraft(v[0] ?? intervalValue)}
             onValueCommit={(v) => {
               const val = v[0] ?? meta.checkIntervalMinutes
@@ -82,6 +91,7 @@ export function SettingsView() {
           label="轮询深检"
           desc="开启后每次定时轮询都追加深检（一次模型调用）；关闭则轮询仅测连通性。新增/编辑/手动「深检」不受此限。"
           checked={meta.deepCheckEnabled}
+          disabled={autoDisabled}
           onCheckedChange={(v) => void applySettings({ deepCheckEnabled: v })}
         />
       </SettingsCard>

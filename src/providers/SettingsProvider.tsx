@@ -8,7 +8,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import type { Meta } from '@main/storage/schema'
 import type { SetSettingsResult } from '@main/ipc/types'
 
-type WritableMeta = Pick<Meta, 'checkIntervalMinutes' | 'deepCheckEnabled' | 'allowPlaintextFallback'>
+type WritableMeta = Pick<Meta, 'checkIntervalMinutes' | 'healthCheckEnabled' | 'deepCheckEnabled' | 'allowPlaintextFallback'>
 
 interface SettingsContextValue {
   meta: Meta | null

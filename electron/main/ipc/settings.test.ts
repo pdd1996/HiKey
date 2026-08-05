@@ -127,6 +127,7 @@ describe('validateMeta 纯函数', () => {
   it('布尔字段类型错 → 拒绝', () => {
     const m = makeDb().data.meta
     expect(validateMeta({ deepCheckEnabled: 'yes' as unknown as boolean }, m).ok).toBe(false)
+    expect(validateMeta({ healthCheckEnabled: 'true' as unknown as boolean }, m).ok).toBe(false)
     expect(validateMeta({ allowPlaintextFallback: 'true' as unknown as boolean }, m).ok).toBe(false)
   })
 

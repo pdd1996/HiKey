@@ -54,6 +54,9 @@ export function validateMeta(partial: Partial<Meta>, current: Meta): SetSettings
   if (partial.deepCheckEnabled !== undefined && typeof partial.deepCheckEnabled !== 'boolean') {
     return { ok: false, reason: 'deepCheckEnabled 须为布尔' }
   }
+  if (partial.healthCheckEnabled !== undefined && typeof partial.healthCheckEnabled !== 'boolean') {
+    return { ok: false, reason: 'healthCheckEnabled 须为布尔' }
+  }
   if (partial.allowPlaintextFallback !== undefined && typeof partial.allowPlaintextFallback !== 'boolean') {
     return { ok: false, reason: 'allowPlaintextFallback 须为布尔' }
   }
