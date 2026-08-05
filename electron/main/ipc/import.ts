@@ -62,6 +62,10 @@ export async function handlePickAndParse(deps: IpcDeps): Promise<PickAndParseRes
 
   // 去重 + 掩码预览（明文 items 留主进程内存）
   const session = buildPreview(parsed.items, parsed.skipped, deps.db.data.keys)
+  // 未识别的 .env 变量（DEEPSEEK_MODEL / MYSQL_* 等）会落进 skipped 行；预览表只展示
+  // 真正可导入的 LLM Key，避免「整页跳过项」干扰决策。skipped 明细仍留在 session
+  // 中（仅主进程内存，不外泄），供日志与未来扩展。
+  session.rows = session.rows.filter((r) => r.status !== 'skipped')
   const sessionId = randomUUID()
   deps.sessions.set(sessionId, session)
 

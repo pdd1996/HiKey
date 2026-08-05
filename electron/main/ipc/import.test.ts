@@ -97,6 +97,35 @@ describe('handlePickAndParse', () => {
       expect(out.rows[0].provider).toBe('openai')
     }
   })
+
+  it('.env 中含未识别变量 → 预览只列出已识别 LLM Key，未识别项不渲染', async () => {
+    const deps = makeDeps({
+      dialog: { showOpenDialog: async () => ({ canceled: false, filePaths: ['/tmp/k.env'] }) } as never,
+      fs: {
+        readFile: async () =>
+          'DEEPSEEK_API_KEY=sk-d\nDEEPSEEK_MODEL=deepseek-chat\n' +
+          'MYSQL_HOST=127.0.0.1\nMYSQL_PORT=3306\nMYSQL_USER=root\nMYSQL_PASSWORD=sec\n'
+      } as never
+    })
+    const out = await handlePickAndParse(deps)
+    if (!out || !out.ok) throw new Error('expected ok')
+    // 仅 deepseek-1 一行；未识别变量不进预览
+    expect(out.rows).toHaveLength(1)
+    expect(out.rows[0]).toMatchObject({
+      name: 'deepseek-1',
+      provider: 'deepseek',
+      status: 'new',
+      action: 'add'
+    })
+    // 且没有任何 skipped 状态行外泄
+    expect(out.rows.some((r) => r.status === 'skipped')).toBe(false)
+    // 会话内存中仍保留 skipped 明细（仅主进程）
+    const sess = deps.sessions.get(out.sessionId)!
+    expect(sess.skipped.length).toBe(5)
+    expect(sess.skipped.map((s) => s.label)).toEqual([
+      'DEEPSEEK_MODEL', 'MYSQL_HOST', 'MYSQL_PORT', 'MYSQL_USER', 'MYSQL_PASSWORD'
+    ])
+  })
 })
 
 describe('handleConfirm', () => {
