@@ -5,7 +5,7 @@
 
 > 本地优先、零云端的 LLM API Key 管理面板，带自动健康检测。
 
-[![版本](https://img.shields.io/badge/version-0.1.0-blue.svg)]()
+[![版本](https://img.shields.io/badge/version-1.0.1-blue.svg)]()
 [![测试](https://img.shields.io/badge/tests-296%20passing-brightgreen.svg)]()
 [![平台](https://img.shields.io/badge/platform-Windows-blue?logo=windows)]()
 [![许可证](https://img.shields.io/badge/license-MIT-green.svg)]()

@@ -5,7 +5,7 @@
 
 > A local-first, zero-cloud LLM API Key management panel with automatic health checks.
 
-[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-1.0.1-blue.svg)]()
 [![Tests](https://img.shields.io/badge/tests-296%20passing-brightgreen.svg)]()
 [![Platform](https://img.shields.io/badge/platform-Windows-blue?logo=windows)]()
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
