@@ -42,12 +42,12 @@ export function ImportPreviewTable({ rows, actions, onActionChange }: ImportPrev
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>名称</TableHead>
-          <TableHead>供应商</TableHead>
-          <TableHead>baseUrl</TableHead>
-          <TableHead>Key 掩码</TableHead>
-          <TableHead>标记</TableHead>
-          <TableHead>动作</TableHead>
+          <TableHead className="w-[140px] text-center">名称</TableHead>
+          <TableHead className="w-[120px] text-center">供应商</TableHead>
+          <TableHead className="text-center">baseUrl</TableHead>
+          <TableHead className="w-[130px] text-center">Key 掩码</TableHead>
+          <TableHead className="w-[110px] text-center">标记</TableHead>
+          <TableHead className="w-[140px] text-center">动作</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -55,14 +55,14 @@ export function ImportPreviewTable({ rows, actions, onActionChange }: ImportPrev
           const locked = r.status === 'skipped'
           return (
             <TableRow key={r.id}>
-              <TableCell className="font-medium">{r.name || '—'}</TableCell>
-              <TableCell>
+              <TableCell className="font-medium py-3 text-center">{r.name || '—'}</TableCell>
+              <TableCell className="py-3 text-center">
                 {r.provider ? <ProviderBadge provider={r.provider} /> : <span className="text-muted-foreground">{providerLabel('custom')}</span>}
               </TableCell>
-              <TableCell className="text-muted-foreground text-xs">{r.baseUrl || '—'}</TableCell>
-              <TableCell className="font-mono text-xs">{r.keyMask}</TableCell>
-              <TableCell className="text-xs text-muted-foreground">{dupLabel(r) ?? (r.status === 'skipped' ? '跳过' : '—')}</TableCell>
-              <TableCell>
+              <TableCell className="text-muted-foreground text-xs py-3 text-center">{r.baseUrl || '—'}</TableCell>
+              <TableCell className="font-mono text-xs py-3 text-center">{r.keyMask}</TableCell>
+              <TableCell className="text-xs text-muted-foreground py-3 text-center">{dupLabel(r) ?? (r.status === 'skipped' ? '跳过' : '—')}</TableCell>
+              <TableCell className="py-3 text-center">
                 <Select
                   value={actions[r.id] ?? r.action}
                   onValueChange={(v) => onActionChange(r.id, v as ImportAction)}

@@ -97,7 +97,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[760px]">
+      <DialogContent className="sm:max-w-[840px]">
         <DialogHeader>
           <DialogTitle>导入 Key</DialogTitle>
           <DialogDescription>
