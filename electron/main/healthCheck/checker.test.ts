@@ -40,6 +40,7 @@ function rec(over: Partial<KeyRecord> = {}): KeyRecord {
 function meta(over: Partial<Meta> = {}): Meta {
   return {
     checkIntervalMinutes: 15,
+    healthCheckEnabled: true,
     deepCheckEnabled: true,
     concurrentChecks: 4,
     pingTimeoutMs: 2000,

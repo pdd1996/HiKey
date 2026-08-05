@@ -31,7 +31,7 @@ function legacyRoot(): DbRoot {
 }
 
 describe('migrate', () => {
-  it('schemaVersion 0 + gemini + checking → 迁移为 custom、删除 status、版本升到 4', () => {
+  it('schemaVersion 0 + gemini + checking → 迁移为 custom、删除 status、版本升到 5', () => {
     const root = legacyRoot()
     const { changed } = migrate(root)
     expect(changed).toBe(true)
@@ -106,6 +106,48 @@ describe('migrate', () => {
       migrate(root)
       expect(root.meta.deepCheckEnabled).toBe(false)
       expect('deepCheckOnEveryPoll' in root.meta).toBe(false)
+    })
+  })
+
+  describe('v4→v5 定时检测总开关', () => {
+    function v4Root(metaOver: Record<string, unknown>): DbRoot {
+      return {
+        schemaVersion: 4 as DbRoot['schemaVersion'],
+        keys: [],
+        meta: {
+          checkIntervalMinutes: 15,
+          healthCheckEnabled: true,
+          deepCheckEnabled: true,
+          concurrentChecks: 4,
+          pingTimeoutMs: 2000,
+          deepTimeoutMs: 2000,
+          allowPlaintextFallback: false,
+          plaintextMode: false,
+          clipboardClearMs: 60000,
+          ...metaOver
+        }
+      } as unknown as DbRoot
+    }
+
+    it('v4 库 deepCheckEnabled=true（无 deepCheckOnEveryPoll）→ 迁移后仍为 true，不被 v3→v4 块误改', () => {
+      const root = v4Root({ deepCheckEnabled: true })
+      migrate(root)
+      expect(root.schemaVersion).toBe(SCHEMA_VERSION)
+      expect(root.meta.deepCheckEnabled).toBe(true)
+      expect('deepCheckOnEveryPoll' in root.meta).toBe(false)
+    })
+
+    it('v4 库缺 healthCheckEnabled → 回填为 true（默认开）', () => {
+      const root = v4Root({})
+      delete (root.meta as unknown as Record<string, unknown>).healthCheckEnabled
+      migrate(root)
+      expect(root.meta.healthCheckEnabled).toBe(true)
+    })
+
+    it('v4 库显式 healthCheckEnabled=false → 保留为 false', () => {
+      const root = v4Root({ healthCheckEnabled: false })
+      migrate(root)
+      expect(root.meta.healthCheckEnabled).toBe(false)
     })
   })
 })

@@ -5,6 +5,7 @@
 //   unknown → 500, checking/unchecked → 删除（设为 undefined）。
 // v3→v4 迁移：合并 deepCheckEnabled + deepCheckOnEveryPoll 为单一开关 deepCheckEnabled。
 //   新值 = 旧 deepCheckEnabled && 旧 deepCheckOnEveryPoll；删除 deepCheckOnEveryPoll。
+// v4→v5 迁移：新增 healthCheckEnabled（定时检测总开关），由 meta 回填默认 true；无结构破坏性变更。
 // 迁移失败中止启动、不破坏原库（由 db.ts 保证：仅成功后写回）。
 
 import {
@@ -62,7 +63,7 @@ export function migrate(root: DbRoot): { changed: boolean } {
         changed = true
       }
     }
-    // 回填缺失 meta 字段为默认
+    // 回填缺失 meta 字段为默认（覆盖每个版本的增量字段，如 v4→v5 的 healthCheckEnabled）
     const meta = root.meta as unknown as Record<keyof Meta, unknown>
     for (const key of Object.keys(DEFAULT_META) as (keyof Meta)[]) {
       if (meta[key] === undefined) {
@@ -70,33 +71,38 @@ export function migrate(root: DbRoot): { changed: boolean } {
         changed = true
       }
     }
-    // v2→v3：旧 KeyStatus 映射为 HTTP 码
-    for (const raw of root.keys) {
-      const k = raw as { status?: string }
-      if (k.status !== undefined && k.status in STATUS_MIGRATION) {
-        const newStatus = STATUS_MIGRATION[k.status]
-        if (newStatus === undefined) {
-          delete k.status
-        } else {
-          k.status = newStatus
+    // v2→v3：旧 KeyStatus 映射为 HTTP 码（仅对 <3 库执行，避免对已迁移库重复跑）
+    if (currentVersion < 3) {
+      for (const raw of root.keys) {
+        const k = raw as { status?: string }
+        if (k.status !== undefined && k.status in STATUS_MIGRATION) {
+          const newStatus = STATUS_MIGRATION[k.status]
+          if (newStatus === undefined) {
+            delete k.status
+          } else {
+            k.status = newStatus
+          }
+          changed = true
         }
-        changed = true
       }
     }
     // v3→v4：合并 deepCheckEnabled + deepCheckOnEveryPoll → 单一开关 deepCheckEnabled。
     // 旧 deepCheckOnEveryPoll 缺失视为 false；合并后删除该字段。
-    const m = root.meta as unknown as Record<string, unknown>
-    const enabledOld =
-      typeof m.deepCheckEnabled === 'boolean' ? m.deepCheckEnabled : DEFAULT_META.deepCheckEnabled
-    const everyPoll = typeof m.deepCheckOnEveryPoll === 'boolean' ? m.deepCheckOnEveryPoll : false
-    m.deepCheckEnabled = enabledOld && everyPoll
-    if ('deepCheckOnEveryPoll' in m) delete m.deepCheckOnEveryPoll
-    changed = true
+    // 仅对 <4 库执行；v4+ 库已无 deepCheckOnEveryPoll，重跑会把 deepCheckEnabled 错误置 false。
+    if (currentVersion < 4) {
+      const m = root.meta as unknown as Record<string, unknown>
+      const enabledOld =
+        typeof m.deepCheckEnabled === 'boolean' ? m.deepCheckEnabled : DEFAULT_META.deepCheckEnabled
+      const everyPoll = typeof m.deepCheckOnEveryPoll === 'boolean' ? m.deepCheckOnEveryPoll : false
+      m.deepCheckEnabled = enabledOld && everyPoll
+      if ('deepCheckOnEveryPoll' in m) delete m.deepCheckOnEveryPoll
+      changed = true
+    }
   }
 
   // 提升版本号到当前
   if (loose.schemaVersion !== SCHEMA_VERSION) {
-    ;(root as { schemaVersion: 4 }).schemaVersion = SCHEMA_VERSION
+    ;(root as { schemaVersion: 5 }).schemaVersion = SCHEMA_VERSION
     changed = true
   }
 

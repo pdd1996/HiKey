@@ -90,6 +90,7 @@ describe('initStorage', () => {
       keys: [],
       meta: {
         checkIntervalMinutes: 15,
+        healthCheckEnabled: true,
         deepCheckEnabled: false,
         concurrentChecks: 4,
         pingTimeoutMs: 2000,
