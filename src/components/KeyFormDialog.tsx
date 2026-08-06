@@ -111,7 +111,7 @@ function ModelComboBox({
 
 const schema = z
   .object({
-    provider: z.enum(['openai', 'anthropic', 'deepseek', 'custom']),
+    provider: z.enum(KNOWN_PROVIDERS),
     name: z.string().trim().min(1, '名称不能为空'),
     baseUrl: z.string().trim().min(1, 'baseUrl 不能为空'),
     secret: z.string(),

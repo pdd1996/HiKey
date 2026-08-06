@@ -83,13 +83,14 @@
 ### FR-2 健康检测（两级）
 **端点与 URL 规则**
 - `baseUrl` 语义：统一为"API 根地址，不含版本路径"（如 `https://api.openai.com`，不含 `/v1`）；**非 custom 的 provider：程序先去尾斜杠，再自动剥离尾部已知版本后缀（`/v1`），最后由代码追加 `/v1`**，避免用户填 `https://api.openai.com/v1` 拼出 `/v1/v1/models`
-- 默认值：openai=`https://api.openai.com`，anthropic=`https://api.anthropic.com`，deepseek=`https://api.deepseek.com`，custom=用户填写（OpenAI 兼容端点）
+- 默认值：openai=`https://api.openai.com`，anthropic=`https://api.anthropic.com`，deepseek=`https://api.deepseek.com`，mimo=`https://api.xiaomimimo.com`，qwen=`https://dashscope.aliyuncs.com/compatible-mode`，kimi=`https://api.moonshot.cn`，minimax=`https://api.minimaxi.com`，custom=用户填写（OpenAI 兼容端点）
 - custom 拼接规则：**原样拼接，不追加版本段**。程序只去尾斜杠，用户填什么路径就拼什么（填 `https://myproxy.com/v1` -> `/v1/models`；填 `https://myproxy.com` -> `/models`）。理由：custom 是用户自填的未知端点，可能走 /v1 也可能走根路径，强制追加 /v1 会排除根路径端点，由用户负责填对
 - custom 前置要求：必须是 OpenAI 兼容端点，支持 `GET {用户填的路径}/models`，否则 ping 返回 404/405 时标 unknown（不破坏深检只在 ping=valid 后执行的规则）
 - 错误码匹配规则：取响应体 `error.code`（无则取 `error.type`），与欠费类关键字表做大小写不敏感 substring 匹配；命中即判 quota_exceeded；该映射表集中维护，M3 联调定稿
 
 **第一级：ping（零 token 成本）**
-- OpenAI 兼容-非 custom（openai/deepseek）：`GET {baseUrl}/v1/models`，`Authorization: Bearer`
+- OpenAI 兼容-非 custom（openai/deepseek/mimo/qwen/kimi）：`GET {baseUrl}/v1/models`，`Authorization: Bearer`
+- MiniMax：`GET /v1/models` 线上返回 404（端点未实现，见 MiniMax-M2#60），无法用于 ping；改用 `POST {baseUrl}/v1/chat/completions`（`Authorization: Bearer`，body 同深检，`max_tokens:1`）当 ping——一次 ≤10 token 的真实推理调用即可同时验证端点可达 + 认证 + 模型可用，代价是 ping 不再零 token
 - Custom：`GET {用户baseUrl}/models`（原样拼接），`Authorization: Bearer`
 - Anthropic：`GET {baseUrl}/v1/models`，`x-api-key` + `anthropic-version: 2023-06-01`
 - 状态映射：200->valid（仅代表端点可达、认证通过，额度状态由二级确认）；401/403 且错误码命中欠费类 `insufficient_quota/billing_not_active/quota/exhausted/balance`->quota_exceeded（Anthropic 的 `billing_not_active` 常走 403，需解析错误体避免误判失效）；401/403 其他情况->invalid；402（含无 body）或 429 且错误码命中欠费类->quota_exceeded；429 且无法解析错误码（含无 body）->rate_limited（默认，不猜测欠费）；5xx/超时/网络异常->unknown；其余 4xx->unknown（不误判失效）
@@ -101,8 +102,9 @@
 - OpenAI：`POST {baseUrl}/v1/chat/completions`，body 含 `model`、`messages`、`max_tokens: 1`
 - Anthropic：`POST {baseUrl}/v1/messages`，headers 含 `x-api-key` + `anthropic-version`，body 含 `model`、`max_tokens: 1`、`messages`
 - DeepSeek：`POST {baseUrl}/v1/chat/completions`，默认测试模型 `deepseek-v4-flash`
+- 小米 MiMo / 千问 Qwen / Kimi / MiniMax：OpenAI 兼容，`POST {baseUrl}/v1/chat/completions`，`Authorization: Bearer`，请求体同 OpenAI；默认测试模型 `mimo-v2.5-pro` / `qwen3.8-max` / `kimi-k2.7-code` / `MiniMax-M3`
 - Custom：用户填 baseUrl 和 testModel，请求体同 OpenAI；端点原样拼接 `{用户baseUrl}/chat/completions`（不追加 /v1）
-- 测试模型：每条记录 `testModel` 可配（所有 provider 均可在表单"高级项"编辑，非仅 Custom）；Custom 必填（无默认，用户自由填写），其他 provider 在内置名单下拉中选择、预填默认但可改；内置名单 `gpt-5.6-sol` / `gpt-5.6-terra` / `gpt-5.6-luna` / `gpt-5.5`（openai，默认 `gpt-5.5`）、`claude-fable-5` / `claude-opus-5` / `claude-sonnet-5` / `claude-haiku-4-5-20251001`（anthropic，默认 `claude-sonnet-5`）、`deepseek-v4-flash` / `deepseek-v4-pro`（deepseek，默认 `deepseek-v4-flash`）；模型名随时可能因 provider 下线而过期，以"可配置 + 集中维护内置名单"为准
+- 测试模型：每条记录 `testModel` 可配（所有 provider 均可在表单"高级项"编辑，非仅 Custom）；Custom 必填（无默认，用户自由填写），其他 provider 在内置名单下拉中选择、预填默认但可改；内置名单 `gpt-5.6-sol` / `gpt-5.6-terra` / `gpt-5.6-luna` / `gpt-5.5`（openai，默认 `gpt-5.5`）、`claude-fable-5` / `claude-opus-5` / `claude-sonnet-5` / `claude-haiku-4-5-20251001`（anthropic，默认 `claude-sonnet-5`）、`deepseek-v4-flash` / `deepseek-v4-pro`（deepseek，默认 `deepseek-v4-flash`）、`mimo-v2.5` / `mimo-v2.5-pro`（mimo，默认 `mimo-v2.5-pro`）、`qwen3.8-max`（qwen，默认 `qwen3.8-max`）、`kimi-k3` / `kimi-k2.7-code`（kimi，默认 `kimi-k2.7-code`）、`MiniMax-M3`（minimax，默认 `MiniMax-M3`）；模型名随时可能因 provider 下线而过期，以"可配置 + 集中维护内置名单"为准
 - 二级映射（按错误性质分类）：
   - 2xx -> valid
   - 401/403 且错误码命中欠费类 -> quota_exceeded；401/403 其他 -> invalid
@@ -124,7 +126,7 @@
 - UI 标注"深度检测输出 1 token，总消耗取决于请求体，通常 < 10 token"
 
 ### FR-3 批量导入
-- 支持 `.env`：解析 `OPENAI_API_KEY=` / `ANTHROPIC_API_KEY=` / `DEEPSEEK_API_KEY=` 等；`*_BASE_URL` 变量可关联为对应条目的 baseUrl；未知变量默认跳过并在预览中列出；**name 生成规则**：.env 无 name 字段，按 `{provider}-{序号}` 自动生成（如 `openai-1`），用户可在预览中改
+- 支持 `.env`：解析 `OPENAI_API_KEY=` / `ANTHROPIC_API_KEY=` / `DEEPSEEK_API_KEY=` / `MIMO_API_KEY=` / `DASHSCOPE_API_KEY=` / `MOONSHOT_API_KEY=` / `MINIMAX_API_KEY=` 等；`*_BASE_URL` 变量可关联为对应条目的 baseUrl；未知变量默认跳过并在预览中列出；**name 生成规则**：.env 无 name 字段，按 `{provider}-{序号}` 自动生成（如 `openai-1`），用户可在预览中改
 - 支持 JSON：`[{ "name": "...", "provider": "...", "baseUrl": "...", "key": "..." }]`
 - 导入前预览：列出 name/provider/baseUrl/key 掩码，并标记"新增 / 重复 / 跳过"
 - 去重规则：同一 provider+name 视为重复；secret 去空白后相同视为重复（去重 hash 仅存在于本次导入会话的主进程内存）
@@ -206,7 +208,7 @@
 {
   "id": "uuid",
   "name": "用户起的名",
-  "provider": "openai | anthropic | deepseek | custom",
+  "provider": "openai | anthropic | deepseek | mimo | qwen | kimi | minimax | custom",
   "baseUrl": "https://api.openai.com",
   "encSecret": "safeStorage 加密后的密文",
   "secretMode": "safeStorage | plaintext",

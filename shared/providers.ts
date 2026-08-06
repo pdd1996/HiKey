@@ -8,7 +8,7 @@
 // 以前在 electron/main/providers.ts。集中到此处后，原文件改为 re-export，现有引用不变。
 
 /** 已知 provider 白名单。不在其中的历史值（如 gemini）迁移为 custom。 */
-export const KNOWN_PROVIDERS = ['openai', 'anthropic', 'deepseek', 'custom'] as const
+export const KNOWN_PROVIDERS = ['openai', 'anthropic', 'deepseek', 'mimo', 'qwen', 'kimi', 'minimax', 'custom'] as const
 
 export type Provider = (typeof KNOWN_PROVIDERS)[number]
 
@@ -16,7 +16,11 @@ export type Provider = (typeof KNOWN_PROVIDERS)[number]
 export const DEFAULT_BASE_URL: Record<Exclude<Provider, 'custom'>, string> = {
   openai: 'https://api.openai.com',
   anthropic: 'https://api.anthropic.com',
-  deepseek: 'https://api.deepseek.com'
+  deepseek: 'https://api.deepseek.com',
+  mimo: 'https://api.xiaomimimo.com',
+  qwen: 'https://dashscope.aliyuncs.com/compatible-mode',
+  kimi: 'https://api.moonshot.cn',
+  minimax: 'https://api.minimaxi.com'
 }
 
 /** 各 provider 默认测试模型（custom 无默认，必填）。M3 联调后定稿。 */
@@ -24,6 +28,10 @@ export const DEFAULT_TEST_MODEL: Record<Provider, string> = {
   openai: 'gpt-5.5',
   anthropic: 'claude-sonnet-5',
   deepseek: 'deepseek-v4-flash',
+  mimo: 'mimo-v2.5-pro',
+  qwen: 'qwen3.8-max',
+  kimi: 'kimi-k2.7-code',
+  minimax: 'MiniMax-M3',
   custom: ''
 }
 
@@ -35,14 +43,22 @@ export const DEFAULT_TEST_MODEL: Record<Provider, string> = {
 export const TEST_MODEL_OPTIONS: Record<Exclude<Provider, 'custom'>, string[]> = {
   openai: ['gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.5'],
   anthropic: ['claude-fable-5', 'claude-opus-5', 'claude-sonnet-5', 'claude-haiku-4-5-20251001'],
-  deepseek: ['deepseek-v4-flash', 'deepseek-v4-pro']
+  deepseek: ['deepseek-v4-flash', 'deepseek-v4-pro'],
+  mimo: ['mimo-v2.5', 'mimo-v2.5-pro'],
+  qwen: ['qwen3.8-max'],
+  kimi: ['kimi-k3', 'kimi-k2.7-code'],
+  minimax: ['MiniMax-M3']
 }
 
-/** .env 变量名 → provider 映射（仅已知三类；custom 不经 .env）。 */
+/** .env 变量名 → provider 映射（custom 不经 .env）。 */
 export const ENV_API_KEY_MAP: Record<string, Exclude<Provider, 'custom'>> = {
   OPENAI_API_KEY: 'openai',
   ANTHROPIC_API_KEY: 'anthropic',
-  DEEPSEEK_API_KEY: 'deepseek'
+  DEEPSEEK_API_KEY: 'deepseek',
+  MIMO_API_KEY: 'mimo',
+  DASHSCOPE_API_KEY: 'qwen',
+  MOONSHOT_API_KEY: 'kimi',
+  MINIMAX_API_KEY: 'minimax'
 }
 
 /** provider → env 变量前缀（用于关联 *_BASE_URL）。custom 无前缀。 */
@@ -50,5 +66,9 @@ export const PROVIDER_ENV_PREFIX: Record<Provider, string | null> = {
   openai: 'OPENAI',
   anthropic: 'ANTHROPIC',
   deepseek: 'DEEPSEEK',
+  mimo: 'MIMO',
+  qwen: 'DASHSCOPE',
+  kimi: 'MOONSHOT',
+  minimax: 'MINIMAX',
   custom: null
 }
