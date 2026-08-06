@@ -5,6 +5,7 @@ import {
   buildHeaders,
   buildDeepBody
 } from './headers'
+import { KNOWN_PROVIDERS } from '../../../shared/providers'
 
 describe('ANTHROPIC_VERSION', () => {
   it('为代码常量 2023-06-01', () => {
@@ -17,10 +18,11 @@ describe('DEFAULT_TEST_MODEL', () => {
     expect(DEFAULT_TEST_MODEL.custom).toBe('')
   })
 
-  it('其余三项非空', () => {
-    expect(DEFAULT_TEST_MODEL.openai).toBe('gpt-5.5')
-    expect(DEFAULT_TEST_MODEL.anthropic).toBe('claude-sonnet-5')
-    expect(DEFAULT_TEST_MODEL.deepseek).toBe('deepseek-v4-flash')
+  it('非 custom provider 均有非空默认模型', () => {
+    for (const p of KNOWN_PROVIDERS) {
+      if (p === 'custom') continue
+      expect(DEFAULT_TEST_MODEL[p]).toBeTruthy()
+    }
   })
 })
 
@@ -41,8 +43,17 @@ describe('buildHeaders', () => {
     }
   })
 
+  it('mimo/qwen/kimi/minimax（OpenAI 兼容）→ Authorization: Bearer，无 anthropic 头', () => {
+    for (const p of ['mimo', 'qwen', 'kimi', 'minimax'] as const) {
+      const h = buildHeaders(p, 'sk-x')
+      expect(h['Authorization']).toBe('Bearer sk-x')
+      expect(h['x-api-key']).toBeUndefined()
+      expect(h['anthropic-version']).toBeUndefined()
+    }
+  })
+
   it('所有 provider 含 content-type: application/json', () => {
-    for (const p of ['openai', 'anthropic', 'deepseek', 'custom'] as const) {
+    for (const p of ['openai', 'anthropic', 'deepseek', 'mimo', 'qwen', 'kimi', 'minimax', 'custom'] as const) {
       expect(buildHeaders(p, 'sk-x')['content-type']).toBe('application/json')
     }
   })

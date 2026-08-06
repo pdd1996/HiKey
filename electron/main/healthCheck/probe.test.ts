@@ -90,4 +90,20 @@ describe('probeKey', () => {
     expect(out.ok).toBe(true)
     expect(f).toHaveBeenCalledTimes(1)
   })
+
+  it('minimax provider → POST /v1/chat/completions 当 ping（带 model 的 body）', async () => {
+    const f = vi.fn(async (url: string, init: RequestInit) => {
+      expect(url).toBe('https://api.minimaxi.com/v1/chat/completions')
+      expect(init.method).toBe('POST')
+      const body = JSON.parse(init.body as string) as Record<string, unknown>
+      expect(body['model']).toBe('MiniMax-M3')
+      return { status: 200, json: async () => ({ choices: [] }) } as unknown as Response
+    }) as unknown as FetchImpl
+    const out = await probeKey(
+      base({ provider: 'minimax', baseUrl: 'https://api.minimaxi.com', testModel: 'MiniMax-M3', fetchImpl: f })
+    )
+    expect(out.ok).toBe(true)
+    if (out.ok) expect(out.status).toBe('200')
+    expect(f).toHaveBeenCalledTimes(1)
+  })
 })

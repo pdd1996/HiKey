@@ -205,6 +205,42 @@ describe('checkKey', () => {
     expect(out.lastError).toBe('400 / model_not_found')
   })
 
+  it('minimax ping+deep 全通过 → 200 + deep 模式；ping 走 POST chat/completions 带 model body', async () => {
+    const f = vi.fn(async (url: string, init: RequestInit) => {
+      expect(url).toBe('https://api.minimaxi.com/v1/chat/completions')
+      expect(init.method).toBe('POST')
+      const body = JSON.parse(init.body as string) as Record<string, unknown>
+      expect(body['model']).toBe('MiniMax-M3')
+      return { status: 200, json: async () => ({ choices: [] }) } as unknown as Response
+    }) as unknown as FetchImpl
+    const out = await checkKey(
+      rec({ provider: 'minimax', baseUrl: 'https://api.minimaxi.com', testModel: 'MiniMax-M3' }),
+      meta(),
+      'manual',
+      f,
+      NOW
+    )
+    expect(out.status).toBe('200')
+    expect(out.lastCheckMode).toBe('deep')
+    expect(out.lastDeepCheckedAt).toBe(NOW)
+    expect(f).toHaveBeenCalledTimes(2)
+  })
+
+  it('minimax ping 401 → 401，不发 deep（fetch 只调 1 次）', async () => {
+    const f = fetchSeq({ status: 401, body: { error: { code: 'invalid_api_key' } } })
+    const out = await checkKey(
+      rec({ provider: 'minimax', baseUrl: 'https://api.minimaxi.com', testModel: 'MiniMax-M3' }),
+      meta(),
+      'manual',
+      f,
+      NOW
+    )
+    expect(out.status).toBe('401')
+    expect(out.lastCheckMode).toBe('ping')
+    expect(out.lastError).toBe('401 / invalid_api_key')
+    expect(f).toHaveBeenCalledTimes(1)
+  })
+
   it('ping 402 无 body → 402', async () => {
     const f = fetchSeq({ status: 402, body: null })
     const out = await checkKey(rec(), meta(), 'manual', f, NOW)
