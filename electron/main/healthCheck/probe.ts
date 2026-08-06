@@ -1,10 +1,10 @@
 // 表单"测试"按钮探测：用未加密的表单输入跑一次 ping，不入库、不落状态、不改 lastChecked。
 //
-// 复用 checker.ts 的 fetchWithTimeout + buildPingUrl/buildHeaders/classifyPing，
+// 复用 checker.ts 的 fetchWithTimeout + buildPingRequest/buildHeaders/classifyPing，
 // 保证 ping 语义与保存后 scheduler 触发的 ping 完全一致。只跑 ping，不跑 deep。
 // 纯函数，无 db 依赖；fetch 实现与 clock 由参数注入，便于 vitest 控制。
 
-import { buildPingUrl } from './urls'
+import { buildPingRequest } from './urls'
 import { buildHeaders } from './headers'
 import { classifyPing } from './classify'
 import { fetchWithTimeout, type FetchImpl } from './checker'
@@ -15,6 +15,12 @@ export type ProbeInput = {
   baseUrl: string
   secret: string
   pingTimeoutMs: number
+  /**
+   * 测试模型。仅 MiniMax 需要——其 ping 走 POST chat/completions，请求体要 model。
+   * 其余 provider 的 ping 是 GET /v1/models，不依赖 testModel，留空即可。
+   * 表单传入当前 testModel 值（非 custom provider 默认已预填）。
+   */
+  testModel?: string
   /** 默认 globalThis.fetch；测试可注入 mock。 */
   fetchImpl?: FetchImpl
   signal?: AbortSignal
@@ -37,9 +43,14 @@ export type ProbeResult =
 export async function probeKey(input: ProbeInput): Promise<ProbeResult> {
   const fetchImpl = input.fetchImpl ?? globalThis.fetch
   const t0 = input.clock?.()
+  const pingReq = buildPingRequest(input.provider, input.baseUrl, input.testModel ?? '')
   const res = await fetchWithTimeout(
-    buildPingUrl(input.provider, input.baseUrl),
-    { method: 'GET', headers: buildHeaders(input.provider, input.secret) },
+    pingReq.url,
+    {
+      method: pingReq.method,
+      headers: buildHeaders(input.provider, input.secret),
+      ...(pingReq.body ? { body: pingReq.body } : {})
+    },
     input.pingTimeoutMs,
     fetchImpl,
     input.signal

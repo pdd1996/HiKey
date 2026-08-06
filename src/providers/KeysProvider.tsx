@@ -28,8 +28,8 @@ interface KeysContextValue {
   checkNow: (id: string, mode: 'ping' | 'deep') => Promise<void>
   checkAll: (mode: 'ping' | 'deep') => Promise<void>
   reveal: (id: string) => Promise<RevealOutcome>
-  /** 表单"测试"：用明文配置跑一次 ping，不入库。 */
-  probe: (input: { provider: Provider; baseUrl: string; secret: string }) => Promise<ProbeResult>
+  /** 表单"测试"：用明文配置跑一次 ping，不入库。testModel 仅 MiniMax 需要（ping 走 POST chat/completions）。 */
+  probe: (input: { provider: Provider; baseUrl: string; secret: string; testModel?: string }) => Promise<ProbeResult>
 }
 
 const KeysContext = createContext<KeysContextValue | null>(null)
@@ -86,7 +86,7 @@ export function KeysProvider({ children }: { children: ReactNode }) {
   const checkAll = useCallback((mode: 'ping' | 'deep') => window.hikey.keys.checkAll(mode), [])
   const reveal = useCallback((id: string) => window.hikey.keys.reveal(id), [])
   const probe = useCallback(
-    (input: { provider: Provider; baseUrl: string; secret: string }) => window.hikey.keys.probe(input),
+    (input: { provider: Provider; baseUrl: string; secret: string; testModel?: string }) => window.hikey.keys.probe(input),
     []
   )
 

@@ -88,12 +88,13 @@ export function handleCheckAll(deps: IpcDeps, mode: CheckModeArg = 'ping'): void
  */
 export async function handleProbe(
   deps: IpcDeps,
-  input: { provider: Provider; baseUrl: string; secret: string }
+  input: { provider: Provider; baseUrl: string; secret: string; testModel?: string }
 ): Promise<ProbeResult> {
   return probeKey({
     provider: input.provider,
     baseUrl: input.baseUrl,
     secret: input.secret,
+    testModel: input.testModel,
     pingTimeoutMs: deps.db.data.meta.pingTimeoutMs,
     fetchImpl: globalThis.fetch,
     clock: deps.now

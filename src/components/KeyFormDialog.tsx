@@ -203,7 +203,12 @@ export function KeyFormDialog({ open, onOpenChange, mode, editKey }: KeyFormDial
     }
     setTestState({ phase: 'pending' })
     try {
-      const result = await probe({ provider: form.getValues('provider'), baseUrl, secret })
+      const result = await probe({
+        provider: form.getValues('provider'),
+        baseUrl,
+        secret,
+        testModel: form.getValues('testModel')
+      })
       setTestState({ phase: 'done', result })
       if (result.ok && result.status === '200') {
         toast.success('测试通过', { description: result.pingMs != null ? `有效 (${result.pingMs} ms)` : '有效' })

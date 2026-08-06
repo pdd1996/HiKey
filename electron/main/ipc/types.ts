@@ -157,8 +157,8 @@ export interface HikeyApi {
     reveal(id: string): Promise<RevealOutcome>
     checkNow(id: string, mode?: CheckModeArg): Promise<void>
     checkAll(mode?: CheckModeArg): Promise<void>
-    /** 表单"测试"：用明文配置跑一次 ping，不入库。 */
-    probe(input: { provider: Provider; baseUrl: string; secret: string }): Promise<ProbeResult>
+    /** 表单"测试"：用明文配置跑一次 ping，不入库。testModel 仅 MiniMax 需要（ping 走 POST chat/completions）。 */
+    probe(input: { provider: Provider; baseUrl: string; secret: string; testModel?: string }): Promise<ProbeResult>
   }
   import: {
     pickAndParse(): Promise<PickAndParseResult>

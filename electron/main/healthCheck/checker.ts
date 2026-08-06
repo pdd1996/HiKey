@@ -5,7 +5,7 @@
 
 import type { KeyRecord, Meta, CheckMode } from '../storage/schema'
 import { revealSecret } from '../crypto'
-import { buildPingUrl, buildDeepUrl } from './urls'
+import { buildPingRequest, buildDeepUrl } from './urls'
 import { buildHeaders, buildDeepBody } from './headers'
 import { classifyPing, classifyDeep } from './classify'
 
@@ -101,9 +101,14 @@ export async function checkKey(
 
   // 2. ping（同时计时延迟）
   const t0 = clock?.()
+  const pingReq = buildPingRequest(record.provider, record.baseUrl, record.testModel)
   const pingRes = await fetchWithTimeout(
-    buildPingUrl(record.provider, record.baseUrl),
-    { method: 'GET', headers: buildHeaders(record.provider, apiKey) },
+    pingReq.url,
+    {
+      method: pingReq.method,
+      headers: buildHeaders(record.provider, apiKey),
+      ...(pingReq.body ? { body: pingReq.body } : {})
+    },
     meta.pingTimeoutMs,
     fetchImpl,
     signal
